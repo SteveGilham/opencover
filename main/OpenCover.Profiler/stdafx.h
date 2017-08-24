@@ -19,7 +19,7 @@
 
 #pragma warning(push)
 // system header files are very noisy
-#pragma warning (disable : 4191 4263 4264 4355 4365 4458 4571 4623 4625 4626 4668 4755 4774 4820 4987 5026 5027 26461)
+#pragma warning (disable : 4191 4263 4264 4355 4365 4458 4571 4623 4625 4626 4668 4755 4774 4820 4987 5026 5027 26461 26481 26493 26495)
 
 #include "targetver.h"
 
@@ -32,6 +32,8 @@
 #define ATL_NO_ASSERT_ON_DESTROY_NONEXISTENT_WINDOW
 
 #include "resource.h"
+#include <range/v3/all.hpp>
+
 #include <gsl.h>
 #pragma warning (suppress : 5031)// work around bug in gsl.h
 #pragma warning(pop)             // work around bug in gsl.h -- span.h doesn't close its push

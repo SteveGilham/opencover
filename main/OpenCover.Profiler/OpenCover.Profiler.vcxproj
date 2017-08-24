@@ -120,6 +120,7 @@
       <GenerateXMLDocumentationFiles>true</GenerateXMLDocumentationFiles>
       <PrecompiledHeaderOutputFile>$(IntDir)$(TargetName)$(PlatformArchitecture).pch</PrecompiledHeaderOutputFile>
       <EnablePREfast>true</EnablePREfast>
+      <AdditionalIncludeDirectories>$(SolutionDir)..\Range-V3-VS2015\include;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
     </ClCompile>
     <Midl>
       <MkTypLibCompatible>false</MkTypLibCompatible>
@@ -159,6 +160,7 @@
       <GenerateXMLDocumentationFiles>true</GenerateXMLDocumentationFiles>
       <PrecompiledHeaderOutputFile>$(IntDir)$(TargetName)$(PlatformArchitecture).pch</PrecompiledHeaderOutputFile>
       <EnablePREfast>true</EnablePREfast>
+      <AdditionalIncludeDirectories>$(SolutionDir)..\Range-V3-VS2015\include;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
     </ClCompile>
     <Midl>
       <MkTypLibCompatible>false</MkTypLibCompatible>
@@ -195,6 +197,7 @@
       <GenerateXMLDocumentationFiles>true</GenerateXMLDocumentationFiles>
       <PrecompiledHeaderOutputFile>$(IntDir)$(TargetName)$(PlatformArchitecture).pch</PrecompiledHeaderOutputFile>
       <EnablePREfast>true</EnablePREfast>
+      <AdditionalIncludeDirectories>$(SolutionDir)..\Range-V3-VS2015\include;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
     </ClCompile>
     <Midl>
       <MkTypLibCompatible>false</MkTypLibCompatible>
@@ -236,6 +239,7 @@
       <GenerateXMLDocumentationFiles>true</GenerateXMLDocumentationFiles>
       <PrecompiledHeaderOutputFile>$(IntDir)$(TargetName)$(PlatformArchitecture).pch</PrecompiledHeaderOutputFile>
       <EnablePREfast>true</EnablePREfast>
+      <AdditionalIncludeDirectories>$(SolutionDir)..\Range-V3-VS2015\include;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
     </ClCompile>
     <Midl>
       <MkTypLibCompatible>false</MkTypLibCompatible>
