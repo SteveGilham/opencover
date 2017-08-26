@@ -13,6 +13,8 @@ class TimerTest : public ::testing::Test {
 	}
 };
 
+std::mutex m;
+std::condition_variable cv;
 
 TEST_F(TimerTest, CanInstantiateAndDelete)
 {
@@ -42,10 +44,18 @@ TEST_F(TimerTest, CanStartTimerAndExecuteExpectedNumberOfTimes)
 	int counter = 0;
 	timer->Start([&]()
 	{
+	    std::unique_lock<std::mutex> lk(m);
+		lk.unlock();
+		cv.notify_all();
 		++counter;
 	}, 20);
 
-	Sleep(110);
+	// wait for the worker
+	{
+		std::unique_lock<std::mutex> lk(m);
+		cv.wait(lk);
+	}
+	Sleep(110 - 20);
 	delete timer;
 
 	ASSERT_EQ(5, counter);
@@ -58,19 +68,35 @@ TEST_F(TimerTest, CanStartStopRestartTimerAndExecuteExpectedNumberOfTimes)
 	int counter = 0;
 	timer->Start([&]()
 	{
+		std::unique_lock<std::mutex> lk(m);
+		lk.unlock();
+		cv.notify_all();
 		++counter;
 	}, 20);
 
-	Sleep(110);
+	// wait for the worker
+	{
+		std::unique_lock<std::mutex> lk(m);
+		cv.wait(lk);
+	}
+	Sleep(110 - 20);
 
 	timer->Stop();
 
 	timer->Start([&]()
 	{
+		std::unique_lock<std::mutex> lk(m);
+		lk.unlock();
+		cv.notify_all();
 		++counter;
 	}, 20);
 
-	Sleep(110);
+	// wait for the worker
+	{
+		std::unique_lock<std::mutex> lk(m);
+		cv.wait(lk);
+	}
+	Sleep(110 - 20);
 
 	timer->Stop();
 
@@ -86,19 +112,35 @@ TEST_F(TimerTest, CanStartNewTimerWithoutStoppingOld)
 	int counter = 0;
 	timer->Start([&]()
 	{
+		std::unique_lock<std::mutex> lk(m);
+		lk.unlock();
+		cv.notify_all();
 		++counter;
 	}, 20);
 
-	Sleep(110);
+	// wait for the worker
+	{
+		std::unique_lock<std::mutex> lk(m);
+		cv.wait(lk);
+	}
+	Sleep(110 - 20);
 
 	ASSERT_EQ(5, counter);
 
 	timer->Start([&]()
 	{
+		std::unique_lock<std::mutex> lk(m);
+		lk.unlock();
+		cv.notify_all();
 		++counter;
 	}, 50);
 
-	Sleep(110);
+	// wait for the worker
+	{
+		std::unique_lock<std::mutex> lk(m);
+		cv.wait(lk);
+	}
+	Sleep(110 - 50);
 
 	timer->Stop();
 
