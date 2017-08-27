@@ -4,6 +4,15 @@
 class MockProfiler :
 	public CTestProfiler
 {
+public:
+	MockProfiler() {}
+
+private:
+	MockProfiler(const MockProfiler &) = delete;
+	MockProfiler(const MockProfiler &&) = delete;
+	void operator= (const MockProfiler &) = delete;
+	void operator= (const MockProfiler &&) = delete;
+
     // ICorProfilerCallback
 public:
 	MOCK_METHOD1_WITH_CALLTYPE(STDMETHODCALLTYPE, Initialize, HRESULT(

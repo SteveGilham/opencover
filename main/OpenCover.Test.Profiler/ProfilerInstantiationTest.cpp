@@ -1,6 +1,8 @@
 #include "stdafx.h"
 
 class ProfilerInstantiationTest : public ::testing::Test {
+public:
+	ProfilerInstantiationTest() {}
 
 private:
 	void SetUp() override
@@ -20,7 +22,7 @@ private:
 	static std::string executable_path()
 	{
 		char buf[MAX_PATH] = { 0 };
-		DWORD length = GetModuleFileNameA(NULL, buf, MAX_PATH);
+		/* DWORD length = */ GetModuleFileNameA(NULL, buf, MAX_PATH);
 		PathRemoveFileSpecA(buf);
 		return buf;
 	}
@@ -44,6 +46,12 @@ protected:
 
 		pRequest->Release();
 	}
+
+private:
+	ProfilerInstantiationTest(const ProfilerInstantiationTest &) = delete;
+	ProfilerInstantiationTest(const ProfilerInstantiationTest &&) = delete;
+	void operator= (const ProfilerInstantiationTest &) = delete;
+	void operator= (const ProfilerInstantiationTest &&) = delete;
 };
 
 

@@ -1,7 +1,10 @@
 #include "stdafx.h"
-#include "../OpenCover.Profiler/Timer.h"
+#include <OpenCover.Profiler/Timer.h>
 
 class TimerTest : public ::testing::Test {
+public:
+	TimerTest() {}
+
 	void SetUp() override
 	{
 
@@ -11,6 +14,12 @@ class TimerTest : public ::testing::Test {
 	{
 
 	}
+
+private:
+	TimerTest(const TimerTest &) = delete;
+	TimerTest(const TimerTest &&) = delete;
+	void operator= (const TimerTest &) = delete;
+	void operator= (const TimerTest &&) = delete;
 };
 
 

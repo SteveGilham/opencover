@@ -58,6 +58,8 @@ void _FunctionTailcall2(
     FunctionTailcall2Global(funcID, clientData, func);
 }
 #else
+#pragma warning (push)
+#pragma warning (disable : 4100) // the compiler doesn't see the arguments referenced in __asm blocks
 void  _declspec(naked) __stdcall _FunctionEnter2(
     FunctionID funcID, 
     UINT_PTR clientData, 
@@ -138,4 +140,5 @@ void _declspec(naked) __stdcall _FunctionTailcall2(
         ret     12
     }
 }
+#pragma warning (pop)
 #endif

@@ -21,26 +21,27 @@ namespace Instrumentation
 
 	Method::~Method()
 	{
-		for (auto it = m_instructions.begin(); it != m_instructions.end(); ++it)
+		for (auto it : m_instructions)
 		{
-			delete *it;
+			delete it; // The analyser gives this one a pass
 		}
 
-		for (auto it = m_exceptions.begin(); it != m_exceptions.end(); ++it)
+		for (auto item : m_exceptions)
 		{
-			delete *it;
+			// but we need to hide this delete
+			auto temp = std::unique_ptr<ExceptionHandler>(item);
 		}
 	}
 
 	/// <summary>Read the full method from the supplied buffer.</summary>
-	void Method::ReadMethod(IMAGE_COR_ILMETHOD* pMethod)
+	void Method::ReadMethod(IMAGE_COR_ILMETHOD const *pMethod)
 	{
-		BYTE* pCode;
-		auto fatImage = static_cast<COR_ILMETHOD_FAT*>(&pMethod->Fat);
+		BYTE* pCode{ nullptr };
+		const auto fatImage = static_cast<COR_ILMETHOD_FAT const *>(&pMethod->Fat);
 		if (!fatImage->IsFat())
 		{
 			ATLTRACE(_T("TINY"));
-			auto tinyImage = static_cast<COR_ILMETHOD_TINY*>(&pMethod->Tiny);
+			const auto tinyImage = static_cast<COR_ILMETHOD_TINY const *>(&pMethod->Tiny);
 			m_header.CodeSize = tinyImage->GetCodeSize();
 			pCode = tinyImage->GetCode();
 			ATLTRACE(_T("TINY(%X) => (%d + 1) : %d"), m_header.CodeSize, m_header.CodeSize, m_header.MaxStack);
@@ -61,7 +62,8 @@ namespace Instrumentation
 	/// <para>The buffer will normally be allocated by a call to <c>IMethodMalloc::Alloc</c></para></remarks>
 	void Method::WriteMethod(IMAGE_COR_ILMETHOD* pMethod)
 	{
-		BYTE* pCode;
+		BYTE* pCode{ nullptr };
+#pragma warning (suppress : 26491) // valid static cast
 		auto fatImage = static_cast<COR_ILMETHOD_FAT*>(&pMethod->Fat);
 
 		m_header.Flags &= ~CorILMethod_MoreSects;
@@ -76,9 +78,9 @@ namespace Instrumentation
 
 		SetBuffer(pCode);
 
-		for (auto it = m_instructions.begin(); it != m_instructions.end(); ++it)
+		for (const auto it : m_instructions)
 		{
-			auto& details = Operations::m_mapNameOperationDetails[(*it)->m_operation];
+			auto& details = Operations::m_mapNameOperationDetails[it->m_operation];
 			if (details.op1 == REFPRE)
 			{
 				Write<BYTE>(details.op2);
@@ -98,26 +100,26 @@ namespace Instrumentation
 			case Null:
 				break;
 			case Byte:
-				Write<BYTE>(static_cast<BYTE>((*it)->m_operand));
+				Write<BYTE>(static_cast<BYTE>(it->m_operand));
 				break;
 			case Word:
-				Write<USHORT>(static_cast<USHORT>((*it)->m_operand));
+				Write<USHORT>(static_cast<USHORT>(it->m_operand));
 				break;
 			case Dword:
-				Write<ULONG>(static_cast<ULONG>((*it)->m_operand));
+				Write<ULONG>(static_cast<ULONG>(it->m_operand));
 				break;
 			case Qword:
-				Write<ULONGLONG>((*it)->m_operand);
+				Write<ULONGLONG>(it->m_operand);
 				break;
 			default:
 				break;
 			}
 
-			if ((*it)->m_operation == CEE_SWITCH)
+			if (it->m_operation == CEE_SWITCH)
 			{
-				for (auto offsetIter = (*it)->m_branchOffsets.begin(); offsetIter != (*it)->m_branchOffsets.end(); ++offsetIter)
+				for (const auto offsetIter : it->m_branchOffsets)
 				{
-					Write<long>(*offsetIter);
+					Write<long>(offsetIter);
 				}
 			}
 		}
@@ -136,21 +138,21 @@ namespace Instrumentation
 			section.Kind |= CorILMethod_Sect_EHTable;
 			section.DataSize = (m_exceptions.size() * 24) + 4;
 			Write<IMAGE_COR_ILMETHOD_SECT_FAT>(section);
-			for (auto it = m_exceptions.begin(); it != m_exceptions.end(); ++it)
+			for (auto it : m_exceptions)
 			{
-				Write<ULONG>((*it)->m_handlerType);
-				Write<long>((*it)->m_tryStart->m_offset);
-				Write<long>((*it)->m_tryEnd->m_offset - (*it)->m_tryStart->m_offset);
-				Write<long>((*it)->m_handlerStart->m_offset);
-				Write<long>((*it)->m_handlerEnd->m_offset - (*it)->m_handlerStart->m_offset);
+				Write<ULONG>(it->m_handlerType);
+				Write<long>(it->m_tryStart->m_offset);
+				Write<long>(it->m_tryEnd->m_offset - it->m_tryStart->m_offset);
+				Write<long>(it->m_handlerStart->m_offset);
+				Write<long>(it->m_handlerEnd->m_offset - it->m_handlerStart->m_offset);
 
-				if (COR_ILEXCEPTION_CLAUSE_FILTER == (*it)->m_handlerType)
+				if (COR_ILEXCEPTION_CLAUSE_FILTER == it->m_handlerType)
 				{
-					Write<long>((*it)->m_filterStart->m_offset);
+					Write<long>(it->m_filterStart->m_offset);
 				}
 				else
 				{
-					Write<ULONG>((*it)->m_token);
+					Write<ULONG>(it->m_token);
 				}
 			}
 		}
@@ -165,9 +167,7 @@ namespace Instrumentation
 
 		while (GetPosition() < m_header.CodeSize)
 		{
-			Instruction* pInstruction = new Instruction();
-			pInstruction->m_offset = GetPosition();
-			pInstruction->m_origOffset = pInstruction->m_offset;
+			const auto offset = static_cast<long>(GetPosition());
 
 			BYTE op1 = REFPRE;
 			BYTE op2 = Read<BYTE>();
@@ -177,8 +177,12 @@ namespace Instrumentation
 				op2 = Read<BYTE>();
 			}
 
-			OperationDetails &details = Operations::m_mapOpsOperationDetails[MAKEWORD(op1, op2)];
-			pInstruction->m_operation = details.canonicalName;
+			const OperationDetails &details = Operations::m_mapOpsOperationDetails[MAKEWORD(op1, op2)];
+			auto pInstruction = std::make_unique<Instruction>(details.canonicalName);
+
+			pInstruction->m_offset = offset;
+			pInstruction->m_origOffset = pInstruction->m_offset;
+
 			switch (details.operandSize)
 			{
 			case Null:
@@ -210,7 +214,8 @@ namespace Instrumentation
 				}
 				else
 				{
-					pInstruction->m_branchOffsets.push_back(static_cast<ULONG>(pInstruction->m_operand));
+					// gsl::narrow from ULONGLONG directly to long causes dogfood tests to fail
+					pInstruction->m_branchOffsets.push_back(static_cast<long>(static_cast<ULONG>(pInstruction->m_operand)));
 				}
 			}
 
@@ -220,7 +225,7 @@ namespace Instrumentation
 				while (numbranches-- != 0) pInstruction->m_branchOffsets.push_back(Read<long>());
 			}
 
-			m_instructions.push_back(pInstruction);
+			m_instructions.push_back(pInstruction.release());
 		}
 
 		ReadSections();
@@ -240,7 +245,7 @@ namespace Instrumentation
 		long handlerStart, long handlerEnd,
 		long filterStart, ULONG token) {
 
-		auto pSection = new ExceptionHandler();
+		auto pSection = std::make_unique<ExceptionHandler>();
 		pSection->m_handlerType = type;
 		pSection->m_tryStart = GetInstructionAtOffset(tryStart);
 		pSection->m_tryEnd = GetInstructionAtOffset(tryStart + tryEnd);
@@ -256,7 +261,7 @@ namespace Instrumentation
 		}
 
 		pSection->m_token = token;
-		return pSection;
+		return pSection.release();
 	}
 
 	template<class flag, class start, class end>
@@ -298,7 +303,7 @@ namespace Instrumentation
 				if ((flags & CorILMethod_Sect_FatFormat) == CorILMethod_Sect_FatFormat)
 				{
 					Advance(-1);
-					int count = ((Read<ULONG>() >> 8) / 24);
+					int count = static_cast<int>((Read<ULONG>() >> 8) / 24);
 					ReadExceptionHandlers<ULONG, long, long>(count);
 				}
 				else
@@ -318,15 +323,14 @@ namespace Instrumentation
 	/// beforehand</remarks>
 	Instruction * Method::GetInstructionAtOffset(long offset)
 	{
-		for (auto it = m_instructions.begin(); it != m_instructions.end(); ++it)
-		{
-			if ((*it)->m_offset == offset)
-			{
-				return (*it);
-			}
-		}
-		_ASSERTE(FALSE);
-		return nullptr;
+		auto ptr = std::find_if(
+			m_instructions.begin(),
+			m_instructions.end(),
+			[=](auto i) -> bool { return i->m_offset == offset; }
+		);
+
+		_ASSERTE(ptr != m_instructions.end());
+		return *ptr;
 	}
 
 	/// <summary>Gets the <c>Instruction</c> that has (is at) the specified offset.</summary>
@@ -350,25 +354,28 @@ namespace Instrumentation
 	/// </example>
 	Instruction * Method::GetInstructionAtOffset(long offset, bool isFinally, bool isFault, bool isFilter, bool isTyped)
 	{
-		for (auto it = m_instructions.begin(); it != m_instructions.end(); ++it)
+		auto ptr = std::find_if(
+			m_instructions.begin(),
+			m_instructions.end(),
+			[=](auto i) -> bool { return i->m_offset == offset; }
+		);
+
+		if (ptr != m_instructions.end())
 		{
-			if ((*it)->m_offset == offset)
-			{
-				return (*it);
-			}
+			return *ptr;
 		}
 
 		if (isFinally || isFault || isFilter || isTyped)
 		{
 			auto pLast = m_instructions.back();
-			auto& details = Operations::m_mapNameOperationDetails[pLast->m_operation];
+			const auto& details = Operations::m_mapNameOperationDetails[pLast->m_operation];
 			if (offset == pLast->m_offset + details.length + details.operandSize)
 			{
 				// add a code label to hang the clause handler end off
-				auto pInstruction = new Instruction(CEE_CODE_LABEL);
+				auto pInstruction = std::make_unique<Instruction>(CEE_CODE_LABEL);
 				pInstruction->m_offset = offset;
-				m_instructions.push_back(pInstruction);
-				return pInstruction;
+				m_instructions.push_back(pInstruction.get());
+				return pInstruction.release();
 			}
 		}
 		_ASSERTE(FALSE);
@@ -382,26 +389,26 @@ namespace Instrumentation
 	/// offsets of the instructions being referenced</remarks>
 	void Method::ResolveBranches()
 	{
-		for (auto it = m_instructions.begin(); it != m_instructions.end(); ++it)
+		for (const auto it : m_instructions)
 		{
-			(*it)->m_branches.clear();
-			auto& details = Operations::m_mapNameOperationDetails[(*it)->m_operation];
-			auto baseOffset = (*it)->m_offset + details.length + details.operandSize;
-			if ((*it)->m_operation == CEE_SWITCH)
+			it->m_branches.clear();
+			const auto& details = Operations::m_mapNameOperationDetails[it->m_operation];
+			auto baseOffset = it->m_offset + details.length + details.operandSize;
+			if (it->m_operation == CEE_SWITCH)
 			{
-				baseOffset += (4 * static_cast<long>((*it)->m_operand));
+				baseOffset += (4 * static_cast<long>(it->m_operand));
 			}
 
-			for (auto offsetIter = (*it)->m_branchOffsets.begin(); offsetIter != (*it)->m_branchOffsets.end(); ++offsetIter)
+			for (const auto offsetIter : it->m_branchOffsets)
 			{
-				auto offset = baseOffset + (*offsetIter);
+				auto offset = baseOffset + offsetIter;
 				auto instruction = GetInstructionAtOffset(offset);
 				if (instruction != nullptr)
 				{
-					(*it)->m_branches.push_back(instruction);
+					it->m_branches.push_back(instruction);
 				}
 			}
-			_ASSERTE((*it)->m_branchOffsets.size() == (*it)->m_branches.size());
+			_ASSERTE(it->m_branchOffsets.size() == it->m_branches.size());
 		}
 	}
 
@@ -419,54 +426,54 @@ namespace Instrumentation
 
 	void Method::DumpInstructions()
 	{
-		for (auto it = m_instructions.begin(); it != m_instructions.end(); ++it)
+		for (const auto it : m_instructions)
 		{
-			auto& details = Operations::m_mapNameOperationDetails[(*it)->m_operation];
+			auto& details = Operations::m_mapNameOperationDetails[it->m_operation];
 			if (details.operandSize == Null)
 			{
-				RELTRACE(_T("(IL_%04X) IL_%04X %s"), (*it)->m_origOffset, (*it)->m_offset, details.stringName);
+				RELTRACE(_T("(IL_%04X) IL_%04X %s"), it->m_origOffset, it->m_offset, details.stringName);
 			}
 			else if (details.operandParam == ShortInlineBrTarget || details.operandParam == InlineBrTarget)
 			{
-				auto offset = (*it)->m_offset + (*it)->m_branchOffsets[0] + details.length + details.operandSize;
+				const auto offset = it->m_offset + it->m_branchOffsets[0] + details.length + details.operandSize;
 				RELTRACE(_T("(IL_%04X) IL_%04X %s IL_%04X"),
-					(*it)->m_origOffset, (*it)->m_offset, details.stringName, offset);
+					it->m_origOffset, it->m_offset, details.stringName, offset);
 			}
 			else if (details.operandParam == InlineMethod || details.operandParam == InlineString)
 			{
 				RELTRACE(_T("(IL_%04X) IL_%04X %s (%02X)%02X%02X%02X"),
-					(*it)->m_origOffset, (*it)->m_offset, details.stringName,
-					(BYTE)((*it)->m_operand >> 24),
-					(BYTE)((*it)->m_operand >> 16),
-					(BYTE)((*it)->m_operand >> 8),
-					(BYTE)((*it)->m_operand & 0xFF));
+					it->m_origOffset, it->m_offset, details.stringName,
+					gsl::narrow<BYTE>(0xFF & (it->m_operand >> 24)),
+					gsl::narrow<BYTE>(0xFF & (it->m_operand >> 16)),
+					gsl::narrow<BYTE>(0xFF & (it->m_operand >> 8)),
+					gsl::narrow<BYTE>(it->m_operand & 0xFF));
 			}
 			else if (details.operandSize == Byte)
 			{
 				RELTRACE(_T("(IL_%04X) IL_%04X %s %02X"),
-					(*it)->m_origOffset, (*it)->m_offset, details.stringName, (*it)->m_operand);
+					it->m_origOffset, it->m_offset, details.stringName, it->m_operand);
 			}
 			else if (details.operandSize == Word)
 			{
 				RELTRACE(_T("(IL_%04X) IL_%04X %s %04X"),
-					(*it)->m_origOffset, (*it)->m_offset, details.stringName, (*it)->m_operand);
+					it->m_origOffset, it->m_offset, details.stringName, it->m_operand);
 			}
 			else if (details.operandSize == Dword)
 			{
 				RELTRACE(_T("(IL_%04X) IL_%04X %s %08X"),
-					(*it)->m_origOffset, (*it)->m_offset, details.stringName, (*it)->m_operand);
+					it->m_origOffset, it->m_offset, details.stringName, it->m_operand);
 			}
 			else
 			{
 				RELTRACE(_T("(IL_%04X) IL_%04X %s %X"),
-					(*it)->m_origOffset, (*it)->m_offset, details.stringName, (*it)->m_operand);
+					it->m_origOffset, it->m_offset, details.stringName, it->m_operand);
 			}
 			
-			for (auto offsetIter = (*it)->m_branchOffsets.begin(); offsetIter != (*it)->m_branchOffsets.end(); ++offsetIter)
+			for (const auto offsetIter : it->m_branchOffsets)
 			{
-				if ((*it)->m_operation == CEE_SWITCH)
+				if (it->m_operation == CEE_SWITCH)
 				{
-					auto offset = (*it)->m_offset + (4 * static_cast<long>((*it)->m_operand)) + (*offsetIter) + details.length + details.operandSize;
+					const auto offset = it->m_offset + (4 * static_cast<long>(it->m_operand)) + offsetIter + details.length + details.operandSize;
 					RELTRACE(_T("    IL_%04X"), offset);
 				}
 			}
@@ -476,18 +483,18 @@ namespace Instrumentation
 	void Method::DumpExceptionFilters()
 	{
 		int i = 0;
-		for (auto it = m_exceptions.begin(); it != m_exceptions.end(); ++it)
+		for (auto it : m_exceptions)
 		{
-			auto tryStartOffset = (*it)->m_tryStart != nullptr ? (*it)->m_tryStart->m_offset : 0;
-			auto tryEndOffset = (*it)->m_tryEnd != nullptr ? (*it)->m_tryEnd->m_offset : 0;
-			auto handlerStartOffset = (*it)->m_handlerStart != nullptr ? (*it)->m_handlerStart->m_offset : 0;
-			auto handlerEndOffset = (*it)->m_handlerEnd != nullptr ? (*it)->m_handlerEnd->m_offset : 0;
-			auto filterStartOffset = (*it)->m_filterStart != nullptr ? (*it)->m_filterStart->m_offset : 0;
+			const auto tryStartOffset = it->m_tryStart != nullptr ? it->m_tryStart->m_offset : 0;
+			const auto tryEndOffset = it->m_tryEnd != nullptr ? it->m_tryEnd->m_offset : 0;
+			const auto handlerStartOffset = it->m_handlerStart != nullptr ? it->m_handlerStart->m_offset : 0;
+			const auto handlerEndOffset = it->m_handlerEnd != nullptr ? it->m_handlerEnd->m_offset : 0;
+			const auto filterStartOffset = it->m_filterStart != nullptr ? it->m_filterStart->m_offset : 0;
 
 			RELTRACE(_T("Section %d: %d %04X %04X %04X %04X %04X %08X"),
-				i, (*it)->m_handlerType, tryStartOffset, tryEndOffset,
+				i, it->m_handlerType, tryStartOffset, tryEndOffset,
 				handlerStartOffset, handlerEndOffset, filterStartOffset,
-				(*it)->m_token);
+				it->m_token);
 
 			++i;
 		}
@@ -500,13 +507,13 @@ namespace Instrumentation
 	/// the benefits dubious after all the new instrumentation has been added.</para></remarks>
 	void Method::ConvertShortBranches()
 	{
-		for (auto it = m_instructions.begin(); it != m_instructions.end(); ++it)
+		for (const auto it : m_instructions)
 		{
-			OperationDetails &details = Operations::m_mapNameOperationDetails[(*it)->m_operation];
-			if ((*it)->m_isBranch && details.operandSize == 1)
+			const OperationDetails &details = Operations::m_mapNameOperationDetails[it->m_operation];
+			if (it->m_isBranch && details.operandSize == 1)
 			{
-				CanonicalName newOperation = (*it)->m_operation;
-				switch ((*it)->m_operation)
+				CanonicalName newOperation = it->m_operation;
+				switch (it->m_operation)
 				{
 				case CEE_BR_S:
 					newOperation = CEE_BR;
@@ -552,12 +559,13 @@ namespace Instrumentation
 					break;
 				default:
 					break;
+#pragma warning (suppress : 4061) // yes there are enum values that get handled by the default case
 				}
-				(*it)->m_operation = newOperation;
-				(*it)->m_operand = UNSAFE_BRANCH_OPERAND;
+				it->m_operation = newOperation;
+				it->m_operand = UNSAFE_BRANCH_OPERAND;
 			}
 
-			(*it)->m_branchOffsets.clear();
+			it->m_branchOffsets.clear();
 		}
 	}
 
@@ -566,36 +574,36 @@ namespace Instrumentation
 	void Method::RecalculateOffsets()
 	{
 		int position = 0;
-		for (auto it = m_instructions.begin(); it != m_instructions.end(); ++it)
+		for (const auto it : m_instructions)
 		{
-			auto& details = Operations::m_mapNameOperationDetails[(*it)->m_operation];
-			(*it)->m_offset = position;
+			const auto& details = Operations::m_mapNameOperationDetails[it->m_operation];
+			it->m_offset = position;
 			position += details.length;
 			position += details.operandSize;
-			if ((*it)->m_operation == CEE_SWITCH)
+			if (it->m_operation == CEE_SWITCH)
 			{
-				position += 4 * static_cast<long>((*it)->m_operand);
+				position += 4 * static_cast<long>(it->m_operand);
 			}
 		}
 
-		for (auto it = m_instructions.begin(); it != m_instructions.end(); ++it)
+		for (const auto it : m_instructions)
 		{
-			auto& details = Operations::m_mapNameOperationDetails[(*it)->m_operation];
-			if ((*it)->m_isBranch)
+			auto& details = Operations::m_mapNameOperationDetails[it->m_operation];
+			if (it->m_isBranch)
 			{
-				(*it)->m_branchOffsets.clear();
-				if ((*it)->m_operation == CEE_SWITCH)
+				it->m_branchOffsets.clear();
+				if (it->m_operation == CEE_SWITCH)
 				{
-					auto offset = ((*it)->m_offset + details.length + details.operandSize + (4 * static_cast<long>((*it)->m_operand)));
-					for (auto bit = (*it)->m_branches.begin(); bit != (*it)->m_branches.end(); ++bit)
+					auto offset = (it->m_offset + details.length + details.operandSize + (4 * static_cast<long>(it->m_operand)));
+					for (const auto bit : it->m_branches)
 					{
-						(*it)->m_branchOffsets.push_back((*bit)->m_offset - offset);
+						it->m_branchOffsets.push_back(bit->m_offset - offset);
 					}
 				}
 				else
 				{
-					(*it)->m_operand = (*it)->m_branches[0]->m_offset - ((*it)->m_offset + details.length + details.operandSize);
-					(*it)->m_branchOffsets.push_back(static_cast<long>((*it)->m_operand));
+					it->m_operand = static_cast<ULONGLONG>(it->m_branches[0]->m_offset - (it->m_offset + details.length + details.operandSize));
+					it->m_branchOffsets.push_back(static_cast<long>(it->m_operand));
 				}
 			}
 		}
@@ -612,14 +620,14 @@ namespace Instrumentation
 		auto lastInstruction = m_instructions.back();
 		auto& details = Operations::m_mapNameOperationDetails[lastInstruction->m_operation];
 
-		m_header.CodeSize = lastInstruction->m_offset + details.length + details.operandSize;
-		long size = sizeof(IMAGE_COR_ILMETHOD_FAT) + m_header.CodeSize;
+		m_header.CodeSize = static_cast<DWORD>(lastInstruction->m_offset + details.length + details.operandSize);
+		long size = gsl::narrow<long>(sizeof(IMAGE_COR_ILMETHOD_FAT) + m_header.CodeSize);
 
 		m_header.Flags &= ~CorILMethod_MoreSects;
 		if (m_exceptions.size() > 0)
 		{
 			m_header.Flags |= CorILMethod_MoreSects;
-			long align = sizeof(DWORD) - 1;
+			const long align = sizeof(DWORD) - 1;
 			size = ((size + align) & ~align);
 			size += ((static_cast<long>(m_exceptions.size()) * 6) + 1) * sizeof(long);
 		}
@@ -632,23 +640,25 @@ namespace Instrumentation
 	/// <param name="instructions">The list of instructions to compare with at that location.</param>
 	bool Method::IsInstrumented(long offset, const InstructionList &instructions)
 	{
-		bool foundInstructionAtOffset = false;
-		for (auto it = m_instructions.begin(); it != m_instructions.end(); ++it)
+		auto it = std::find_if(
+			m_instructions.begin(),
+			m_instructions.end(),
+			[=](auto i) -> bool { return i->m_origOffset == offset; }
+		);
+
+		if (it != m_instructions.end())
 		{
-			if ((*it)->m_origOffset == offset)
+			for (auto it2 : instructions)
 			{
-				foundInstructionAtOffset = true;
-				for (auto it2 = instructions.begin(); it2 != instructions.end(); ++it2)
-				{
-					if (!(*it2)->Equivalent(*(*it)))
-						return false;
-					++it;
-				}
-				break;
+				if (!it2->Equivalent(*(*it)))
+					return false;
+				++it;
 			}
+
+			return true;
 		}
 
-		return foundInstructionAtOffset;
+		return false;
 	}
 
 	/// <summary>Insert a sequence of instructions at a specific offset</summary>
@@ -660,35 +670,41 @@ namespace Instrumentation
 	void Method::InsertInstructionsAtOffset(long offset, const InstructionList &instructions)
 	{
 		InstructionList clone;
-		for (auto it = instructions.begin(); it != instructions.end(); ++it)
+		for (auto item : instructions)
 		{
-			clone.push_back(new Instruction(*(*it)));
+			auto copy = std::make_unique<Instruction>(*item);
+			clone.push_back(copy.release());
 		}
 
-		for (auto it = m_instructions.begin(); it != m_instructions.end(); ++it)
+		auto it = std::find_if(
+			m_instructions.begin(),
+			m_instructions.end(),
+			[=](auto i) -> bool { return i->m_offset == offset; }
+		);
+
+		if (it != m_instructions.end())
 		{
-			if ((*it)->m_offset == offset)
-			{
-				++it;
-				m_instructions.insert(it, clone.begin(), clone.end());
-				break;
-			}
+			++it;
+			m_instructions.insert(it, clone.begin(), clone.end());
 		}
 
-		for (auto it = m_instructions.begin(); it != m_instructions.end(); ++it)
+		auto it2 = std::find_if(
+			m_instructions.begin(),
+			m_instructions.end(),
+			[=](auto i) -> bool { return i->m_origOffset == offset; }
+		);
+
+		if (it2 != m_instructions.end())
 		{
-			if ((*it)->m_origOffset == offset)
+			// move instruction to after the clone block
+			auto orig = *(*it2);
+			for (unsigned int i = 0; i < clone.size(); i++)
 			{
-				auto orig = *(*it);
-				for (unsigned int i = 0; i < clone.size(); i++)
-				{
-					auto temp = it;
-					++it;
-					*(*temp) = *(*it);
-				}
-				*(*it) = orig;
-				break;
+				const auto temp = it2;
+				++it2;
+				*(*temp) = *(*it2);
 			}
+			*(*it2) = orig;
 		}
 
 		RecalculateOffsets();
@@ -703,41 +719,47 @@ namespace Instrumentation
 	void Method::InsertInstructionsAtOriginalOffset(long origOffset, const InstructionList &instructions)
 	{
 		InstructionList clone;
-		for (auto it = instructions.begin(); it != instructions.end(); ++it)
+		for (auto item : instructions)
 		{
-			clone.push_back(new Instruction(*(*it)));
+			auto copy = std::make_unique<Instruction>(*item);
+			clone.push_back(copy.release());
 		}
 
-		long actualOffset = 0;
-		Instruction* actualInstruction = nullptr;
-		for (auto it = m_instructions.begin(); it != m_instructions.end(); ++it)
+		long actualOffset{ 0 };
+		Instruction* actualInstruction{ nullptr };
+		auto actualInstructionptr = std::find_if(
+			m_instructions.begin(),
+			m_instructions.end(),
+			[=](auto i) -> bool {return i->m_origOffset == origOffset;}
+		);
+
+		if (actualInstructionptr != m_instructions.end())
 		{
-			if ((*it)->m_origOffset == origOffset)
-			{
-				actualInstruction = *it;
-				actualOffset = (actualInstruction)->m_offset;
-				++it;
-				m_instructions.insert(it, clone.begin(), clone.end());
-				break;
-			}
+			actualInstruction = *actualInstructionptr;
+			actualOffset = actualInstruction->m_offset;
+			++actualInstructionptr;
+			m_instructions.insert(actualInstructionptr, clone.begin(), clone.end());
 		}
 
 		if (!DoesTryHandlerPointToOffset(actualOffset))
 		{
-			for (auto it = m_instructions.begin(); it != m_instructions.end(); ++it)
+			auto ptr = std::find_if(
+				m_instructions.begin(),
+				m_instructions.end(),
+				[=](auto i) -> bool {return i == actualInstruction;}
+			);
+
+			if (ptr != m_instructions.end())
 			{
-				if (*it == actualInstruction)
+				// move instruction to after the clone block
+				Instruction orig = *(*ptr);
+				for (unsigned int i = 0; i < clone.size(); i++)
 				{
-					Instruction orig = *(*it);
-					for (unsigned int i = 0; i < clone.size(); i++)
-					{
-						auto temp = it;
-						++it;
-						*(*temp) = *(*it);
-					}
-					*(*it) = orig;
-					break;
+					const auto temp = ptr;
+					++ptr;
+					*(*temp) = *(*ptr);
 				}
+				*(*ptr) = orig;
 			}
 		}
 
@@ -750,16 +772,13 @@ namespace Instrumentation
 	/// <returns>An <c>Instruction</c> that exists at that location.</returns>
 	bool Method::DoesTryHandlerPointToOffset(long offset)
 	{
-		for (auto it = m_exceptions.begin(); it != m_exceptions.end(); ++it)
-		{
-			if ((*it)->m_handlerType == COR_ILEXCEPTION_CLAUSE_NONE
-				&& ((*it)->m_handlerStart->m_offset == offset 
-				&& (*it)->m_handlerStart->m_operand == CEE_THROW))
-			{
-				return true;
-			}
-		}
-		return false;
+		return std::any_of(
+			m_exceptions.begin(),
+			m_exceptions.end(),
+			[=](auto i) -> bool { return (i->m_handlerType == COR_ILEXCEPTION_CLAUSE_NONE
+				                      && i->m_handlerStart->m_offset == offset
+					                  && i->m_handlerStart->m_operand == CEE_THROW);}
+		);
 	}
 
 	/// <summary>Get the size of the COR_IL_MAP block</summary>
@@ -769,13 +788,11 @@ namespace Instrumentation
 	/// debugger where the new debug points are.</remarks>
 	ULONG Method::GetILMapSize()
 	{
-		ULONG mapSize = 0;
-		for (auto it = m_instructions.begin(); it != m_instructions.end(); ++it)
-		{
-			if ((*it)->m_origOffset != -1)
-				++mapSize;
-		}
-		return mapSize;
+		return gsl::narrow<ULONG>(std::count_if(
+			m_instructions.begin(),
+			m_instructions.end(),
+			[](auto i) -> bool { return i->m_origOffset != -1; }
+		));
 	}
 
 	/// <summary>Populate a supplied COR_IL_MAP block</summary>
@@ -788,16 +805,17 @@ namespace Instrumentation
 	{
 		_ASSERTE(GetILMapSize() == mapSize);
 
-		mapSize = 0;
-		for (auto it = m_instructions.begin(); it != m_instructions.end(); ++it)
-		{
-			if ((*it)->m_origOffset != -1)
-			{
-				maps[mapSize].fAccurate = TRUE;
-				maps[mapSize].oldOffset = (*it)->m_origOffset;
-				maps[mapSize].newOffset = (*it)->m_offset;
+		const auto span = gsl::as_span<COR_IL_MAP>(maps, gsl::narrow<ptrdiff_t>(mapSize));
 
-				++mapSize;
+		auto map = span.begin();
+		for(auto item : m_instructions)
+		{
+			if (item->m_origOffset != -1)
+			{
+				map->fAccurate = TRUE;
+				map->oldOffset = static_cast<ULONG32>(item->m_origOffset);
+				map->newOffset = static_cast<ULONG32>(item->m_offset);
+				++map;
 			}
 		}
 	}

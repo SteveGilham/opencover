@@ -83,7 +83,8 @@ struct OperationDetails
     BYTE length;
     BYTE op1;
     BYTE op2;
-    OpcodeKind opcodeKind;
+#pragma warning (suppress : 4820) // 1 byte padding
+	OpcodeKind opcodeKind;
     TCHAR *stringName;
 };
 

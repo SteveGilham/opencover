@@ -37,6 +37,7 @@ namespace Instrumentation {
 		ULONGLONG m_operand;
 		bool m_isBranch;
 
+#pragma warning (suppress : 4820) // 7 bytes padding
 		std::vector<long> m_branchOffsets;
 		InstructionList m_branches;
 		InstructionList m_joins;
@@ -46,5 +47,6 @@ namespace Instrumentation {
 	public:
 
 		friend class Method;
+#pragma warning (suppress : 4820) // 4 bytes padding
 	};
 }

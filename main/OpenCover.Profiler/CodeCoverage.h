@@ -14,11 +14,15 @@
 #include "ProfileBase.h"
 #include "ProfilerInfo.h"
 
+#pragma warning(push)
+// system header files are very noisy
+#pragma warning (disable : 4061 4365)
 #include <unordered_map>
 
 #include <memory>
+#pragma warning(pop)
 
-#define COM_FAIL_MSG_RETURN_ERROR(hr, msg) if (!SUCCEEDED(hr)) { RELTRACE(msg, hr); return (hr); }
+#define COM_FAIL_MSG_RETURN_ERROR(T, hr, msg) if (!SUCCEEDED(hr)) { RELTRACE(msg, hr); return (static_cast<T>(hr)); }
 
 #define COM_FAIL_MSG_RETURN_OTHER(hr, ret, msg) if (!SUCCEEDED(hr)) { RELTRACE(msg, hr); return (ret); }
 
@@ -40,7 +44,7 @@ class ATL_NO_VTABLE CCodeCoverage :
     public CProfilerBase
 {
 public:
-    CCodeCoverage() 
+    CCodeCoverage()  : m_runtimeVersion(), safe_mode_(), enableDiagnostics_()
     {
         m_runtimeType = COR_PRF_DESKTOP_CLR;
         m_useOldStyle = false;
@@ -55,6 +59,7 @@ public:
 
 DECLARE_REGISTRY_RESOURCEID(IDR_CODECOVERAGE)
 
+#pragma warning (suppress : 26481) // pointer arithmetic in magic macro
 BEGIN_COM_MAP(CCodeCoverage)
     COM_INTERFACE_ENTRY(ICorProfilerCallback)
     COM_INTERFACE_ENTRY(ICorProfilerCallback2)
@@ -63,6 +68,7 @@ BEGIN_COM_MAP(CCodeCoverage)
     COM_INTERFACE_ENTRY(ICorProfilerCallback5)
     COM_INTERFACE_ENTRY(ICorProfilerCallback6)
     COM_INTERFACE_ENTRY(ICorProfilerCallback7)
+#pragma warning (suppress : 26485) // array used as pointer in magic macro
 END_COM_MAP()
 
     DECLARE_PROTECT_FINAL_CONSTRUCT()
@@ -124,20 +130,23 @@ public:
     /*[in]*/COR_PRF_FRAME_INFO                  func);
 
 private:
-    std::unordered_map<std::wstring, bool> m_allowModules;
+#pragma warning (suppress : 4820) // 4 bytes padding
+	std::unordered_map<std::wstring, bool> m_allowModules;
     std::unordered_map<std::wstring, std::wstring> m_allowModulesAssemblyMap;
 
     COR_PRF_RUNTIME_TYPE m_runtimeType;
     ASSEMBLYMETADATA m_runtimeVersion;
 
     bool m_useOldStyle;
+#pragma warning (suppress : 4820) // 3 bytes padding
 	ULONG m_threshold;
     bool m_tracingEnabled;
     bool safe_mode_;
 	bool enableDiagnostics_;
 
 private:
-    std::vector<ULONG> m_thresholds;
+#pragma warning (suppress : 4820) // 5 bytes padding
+	std::vector<ULONG> m_thresholds;
     void Resize(ULONG minSize);
 
 
@@ -218,4 +227,5 @@ public:
         /* [in] */ DWORD osThreadId) override;
 };
 
+#pragma warning (suppress : 4263) 
 OBJECT_ENTRY_AUTO(__uuidof(CodeCoverage), CCodeCoverage)

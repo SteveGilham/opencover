@@ -50,7 +50,7 @@ namespace Instrumentation
 		void RecalculateOffsets();
 
 	private:
-		void ReadMethod(IMAGE_COR_ILMETHOD* pMethod);
+		void ReadMethod(IMAGE_COR_ILMETHOD const * pMethod);
 		void ReadBody();
 
 		void ConvertShortBranches();
@@ -75,22 +75,23 @@ namespace Instrumentation
 
 #ifdef TEST_FRAMEWORK
 	public:
-		ExceptionHandlerList m_exceptions;
 #else
 	private:
-		ExceptionHandlerList m_exceptions;
 #endif
+#pragma warning (suppress : 4820) // 4 bytes padding
+		ExceptionHandlerList m_exceptions;
+
 	public:
 		InstructionList m_instructions;
 
 		int GetNumberOfInstructions() const
 		{
-			return static_cast<int>(m_instructions.size());
+			return gsl::narrow<int>(m_instructions.size());
 		}
 
 		int GetNumberOfExceptions() const
 		{
-			return static_cast<int>(m_exceptions.size());
+			return gsl::narrow<int>(m_exceptions.size());
 		}
 	};
 }

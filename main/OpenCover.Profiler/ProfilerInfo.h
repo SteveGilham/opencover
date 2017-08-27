@@ -25,6 +25,7 @@ public:
         m_pProfilerHook = nullptr;
 	}
 
+#pragma warning (suppress : 26481) // pointer arithmetic in magic macro
 	BEGIN_COM_MAP(CProfilerInfo)
 		COM_INTERFACE_ENTRY(ICorProfilerInfo)
 		COM_INTERFACE_ENTRY(ICorProfilerInfo2)
@@ -33,6 +34,7 @@ public:
 		COM_INTERFACE_ENTRY(ICorProfilerInfo5)
 		COM_INTERFACE_ENTRY(ICorProfilerInfo6)
 		COM_INTERFACE_ENTRY(ICorProfilerInfo7)
+#pragma warning (suppress : 26485) // array used as pointer in magic macro
 	END_COM_MAP()
 
 

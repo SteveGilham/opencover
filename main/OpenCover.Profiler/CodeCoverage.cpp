@@ -24,18 +24,18 @@ HRESULT STDMETHODCALLTYPE CCodeCoverage::Initialize(
 }
 
 void GetVersion(LPTSTR szVersionFile, DWORD *dwVersionHigh, DWORD *dwVersionLow) {
-	DWORD  verHandle = NULL;
 	UINT   size = 0;
 	VS_FIXEDFILEINFO *verInfo = NULL;
-	auto  verSize = GetFileVersionInfoSize(szVersionFile, &verHandle);
+	auto  verSize = GetFileVersionInfoSize(szVersionFile, nullptr);
 
 	if (verSize != NULL)
 	{
-		auto verData = new BYTE[verSize];
+		auto verData = std::vector<BYTE>(verSize);
 
-		if (GetFileVersionInfo(szVersionFile, 0, verSize, verData))
+		if (GetFileVersionInfo(szVersionFile, 0, verSize, &verData[0]))
 		{
-			if (VerQueryValue(verData, _T("\\"), (VOID FAR* FAR*)&verInfo, &size))
+#pragma warning (suppress : 26490) // safe
+			if (VerQueryValue(&verData[0], _T("\\"), reinterpret_cast<VOID FAR* FAR*>(&verInfo), &size))
 			{
 				if (size >= sizeof(VS_FIXEDFILEINFO))
 				{
@@ -54,7 +54,6 @@ void GetVersion(LPTSTR szVersionFile, DWORD *dwVersionHigh, DWORD *dwVersionLow)
 				}
 			}
 		}
-		delete[] verData;
 	}
 }
 
@@ -63,17 +62,17 @@ HRESULT CCodeCoverage::OpenCoverInitialise(IUnknown *pICorProfilerInfoUnk){
 	ATLTRACE(_T("::OpenCoverInitialise"));
 
     OLECHAR szGuid[40]={0};
-    (void) ::StringFromGUID2(CLSID_CodeCoverage, szGuid, 40);
-    RELTRACE(L"    ::Initialize(...) => CLSID == %s", szGuid);
+    (void) ::StringFromGUID2(CLSID_CodeCoverage, &szGuid[0], 40);
+    RELTRACE(L"    ::Initialize(...) => CLSID == %s", &szGuid[0]);
     //::OutputDebugStringW(szGuid);
 
 	TCHAR szExeName[MAX_PATH];
-    GetModuleFileName(nullptr, szExeName, MAX_PATH);
-    RELTRACE(_T("    ::Initialize(...) => EXE = %s"), szExeName);
+    GetModuleFileName(nullptr, &szExeName[0], MAX_PATH);
+    RELTRACE(_T("    ::Initialize(...) => EXE = %s"), &szExeName[0]);
 
     TCHAR szModuleName[MAX_PATH];
-    GetModuleFileName(_AtlModule.m_hModule, szModuleName, MAX_PATH);
-    RELTRACE(_T("    ::Initialize(...) => PROFILER = %s"), szModuleName);
+    GetModuleFileName(_AtlModule.m_hModule, &szModuleName[0], MAX_PATH);
+    RELTRACE(_T("    ::Initialize(...) => PROFILER = %s"), &szModuleName[0]);
     //::OutputDebugStringW(szModuleName);
 
     if (g_pProfiler!=nullptr) 
@@ -104,39 +103,41 @@ HRESULT CCodeCoverage::OpenCoverInitialise(IUnknown *pICorProfilerInfoUnk){
     }
 
     TCHAR key[1024] = {0};
-    ::GetEnvironmentVariable(_T("OpenCover_Profiler_Key"), key, 1024);
-    RELTRACE(_T("    ::Initialize(...) => key = %s"), key);
+    ::GetEnvironmentVariable(_T("OpenCover_Profiler_Key"), &key[0], 1024);
+    RELTRACE(_T("    ::Initialize(...) => key = %s"), &key[0]);
 
     TCHAR ns[1024] = {0};
-    ::GetEnvironmentVariable(_T("OpenCover_Profiler_Namespace"), ns, 1024);
-    ATLTRACE(_T("    ::Initialize(...) => ns = %s"), ns);
+    ::GetEnvironmentVariable(_T("OpenCover_Profiler_Namespace"), &ns[0], 1024);
+    ATLTRACE(_T("    ::Initialize(...) => ns = %s"), &ns[0]);
 
 	TCHAR instrumentation[1024] = { 0 };
-	::GetEnvironmentVariable(_T("OpenCover_Profiler_Instrumentation"), instrumentation, 1024);
-	ATLTRACE(_T("    ::Initialize(...) => instrumentation = %s"), instrumentation);
+	::GetEnvironmentVariable(_T("OpenCover_Profiler_Instrumentation"), &instrumentation[0], 1024);
+	ATLTRACE(_T("    ::Initialize(...) => instrumentation = %s"), &instrumentation[0]);
 
 	TCHAR diagnostics[1024] = { 0 };
-	::GetEnvironmentVariable(_T("OpenCover_Profiler_Diagnostics"), diagnostics, 1024);
-	ATLTRACE(_T("    ::Initialize(...) => Diagnostics = %s"), diagnostics);
+	::GetEnvironmentVariable(_T("OpenCover_Profiler_Diagnostics"), &diagnostics[0], 1024);
+	ATLTRACE(_T("    ::Initialize(...) => Diagnostics = %s"), &diagnostics[0]);
 
     TCHAR threshold[1024] = {0};
-    ::GetEnvironmentVariable(_T("OpenCover_Profiler_Threshold"), threshold, 1024);
-    m_threshold = _tcstoul(threshold, nullptr, 10);
+    ::GetEnvironmentVariable(_T("OpenCover_Profiler_Threshold"), &threshold[0], 1024);
+    m_threshold = _tcstoul(&threshold[0], nullptr, 10);
     ATLTRACE(_T("    ::Initialize(...) => threshold = %ul"), m_threshold);
 
     TCHAR tracebyTest[1024] = {0};
-    ::GetEnvironmentVariable(_T("OpenCover_Profiler_TraceByTest"), tracebyTest, 1024);
-    m_tracingEnabled = _tcslen(tracebyTest) != 0;
-	ATLTRACE(_T("    ::Initialize(...) => tracingEnabled = %s (%s)"), m_tracingEnabled ? _T("true") : _T("false"), tracebyTest);
+    ::GetEnvironmentVariable(_T("OpenCover_Profiler_TraceByTest"), &tracebyTest[0], 1024);
+    m_tracingEnabled = _tcslen(&tracebyTest[0]) != 0;
+#pragma warning (suppress : 26485) // string used as pointer
+	ATLTRACE(_T("    ::Initialize(...) => tracingEnabled = %s (%s)"), m_tracingEnabled ? _T("true") : _T("false"), &tracebyTest[0]);
 
     TCHAR safeMode[1024] = { 0 };
-    ::GetEnvironmentVariable(_T("OpenCover_Profiler_SafeMode"), safeMode, 1024);
-    safe_mode_ = m_tracingEnabled || (_tcslen(safeMode) != 0);
-    ATLTRACE(_T("    ::Initialize(...) => safeMode = %s (%s)"), safe_mode_ ? _T("true") : _T("false"), safeMode);
+    ::GetEnvironmentVariable(_T("OpenCover_Profiler_SafeMode"), &safeMode[0], 1024);
+    safe_mode_ = m_tracingEnabled || (_tcslen(&safeMode[0]) != 0);
+#pragma warning (suppress : 26485) // string used as pointer
+	ATLTRACE(_T("    ::Initialize(...) => safeMode = %s (%s)"), safe_mode_ ? _T("true") : _T("false"), &safeMode[0]);
 
     TCHAR shortwait[1024] = { 0 };
-    if (::GetEnvironmentVariable(_T("OpenCover_Profiler_ShortWait"), shortwait, 1024) > 0) {
-        _shortwait = _tcstoul(shortwait, nullptr, 10);
+    if (::GetEnvironmentVariable(_T("OpenCover_Profiler_ShortWait"), &shortwait[0], 1024) > 0) {
+        _shortwait = _tcstoul(&shortwait[0], nullptr, 10);
         if (_shortwait < 10000) 
             _shortwait = 10000;
         if (_shortwait > 60000)
@@ -145,17 +146,17 @@ HRESULT CCodeCoverage::OpenCoverInitialise(IUnknown *pICorProfilerInfoUnk){
     }
 
 	DWORD dwVersionHigh, dwVersionLow;
-	GetVersion(szModuleName, &dwVersionHigh, &dwVersionLow);
+	GetVersion(&szModuleName[0], &dwVersionHigh, &dwVersionLow);
 
-	m_useOldStyle = (tstring(instrumentation) == _T("oldSchool"));
+	m_useOldStyle = (tstring(&instrumentation[0]) == _T("oldSchool"));
 
-	enableDiagnostics_ = (tstring(diagnostics) == _T("true"));
+	enableDiagnostics_ = (tstring(&diagnostics[0]) == _T("true"));
 
     _host = std::make_shared<Communication::ProfilerCommunication>(_shortwait, dwVersionHigh, dwVersionLow);
 
 	int sendVisitPointsTimerInterval = getSendVisitPointsTimerInterval();
 
-	if (!_host->Initialise(key, ns, szExeName,
+	if (!_host->Initialise(&key[0], &ns[0], &szExeName[0],
 		safe_mode_, sendVisitPointsTimerInterval))
     {
         RELTRACE(_T("    ::Initialize => Profiler will not run for this process."));
@@ -167,24 +168,24 @@ HRESULT CCodeCoverage::OpenCoverInitialise(IUnknown *pICorProfilerInfoUnk){
 	if (!IsChainedProfilerHooked()){
 		DWORD dwMask = AppendProfilerEventMask(0); 
 
-		COM_FAIL_MSG_RETURN_ERROR(m_profilerInfo2->SetEventMask(dwMask),
+		COM_FAIL_MSG_RETURN_ERROR(HRESULT, m_profilerInfo2->SetEventMask(dwMask),
 			_T("    ::Initialize(...) => SetEventMask => 0x%X"));
 	}
 
     if(m_profilerInfo3 != nullptr)
     {
-        COM_FAIL_MSG_RETURN_ERROR(m_profilerInfo3->SetFunctionIDMapper2(FunctionMapper2, this), 
+        COM_FAIL_MSG_RETURN_ERROR(HRESULT, m_profilerInfo3->SetFunctionIDMapper2(FunctionMapper2, this),
             _T("    ::Initialize(...) => SetFunctionIDMapper2 => 0x%X"));
     }
     else
     {
-        COM_FAIL_MSG_RETURN_ERROR(m_profilerInfo2->SetFunctionIDMapper(FunctionMapper), 
+        COM_FAIL_MSG_RETURN_ERROR(HRESULT, m_profilerInfo2->SetFunctionIDMapper(FunctionMapper),
             _T("    ::Initialize(...) => SetFunctionIDMapper => 0x%X"));
     }
 
     g_pProfiler = this;
 
-    COM_FAIL_MSG_RETURN_ERROR(m_profilerInfo2->SetEnterLeaveFunctionHooks2(
+    COM_FAIL_MSG_RETURN_ERROR(HRESULT, m_profilerInfo2->SetEnterLeaveFunctionHooks2(
         _FunctionEnter2, _FunctionLeave2, _FunctionTailcall2), 
         _T("    ::Initialize(...) => SetEnterLeaveFunctionHooks2 => 0x%X"));
 
@@ -233,8 +234,8 @@ HRESULT STDMETHODCALLTYPE CCodeCoverage::Shutdown( void)
 		_host->CloseChannel(safe_mode_);
 
 		WCHAR szExeName[MAX_PATH];
-		GetModuleFileNameW(nullptr, szExeName, MAX_PATH);
-		RELTRACE(_T("::Shutdown - Nothing left to do but return S_OK(%s)"), W2CT(szExeName));
+		GetModuleFileNameW(nullptr, &szExeName[0], MAX_PATH);
+		RELTRACE(_T("::Shutdown - Nothing left to do but return S_OK(%s)"), W2CT(&szExeName[0]));
 		g_pProfiler = nullptr;
 		return S_OK;
 	});
@@ -349,7 +350,7 @@ HRESULT STDMETHODCALLTYPE CCodeCoverage::JITCompilationStarted(
                 {
                     IMAGE_COR_ILMETHOD* pMethodHeader = nullptr;
                     ULONG iMethodSize = 0;
-                    COM_FAIL_MSG_RETURN_ERROR(m_profilerInfo2->GetILFunctionBody(moduleId, functionToken, (LPCBYTE*)&pMethodHeader, &iMethodSize),
+                    COM_FAIL_MSG_RETURN_ERROR(HRESULT, m_profilerInfo2->GetILFunctionBody(moduleId, functionToken, (LPCBYTE*)&pMethodHeader, &iMethodSize),
                         _T("    ::JITCompilationStarted(...) => GetILFunctionBody => 0x%X"));
 
                     Instrumentation::Method instumentedMethod(pMethodHeader);
@@ -377,18 +378,18 @@ HRESULT STDMETHODCALLTYPE CCodeCoverage::JITCompilationStarted(
                     instumentedMethod.DumpIL(enableDiagnostics_);
 
                     CComPtr<IMethodMalloc> methodMalloc;
-                    COM_FAIL_MSG_RETURN_ERROR(m_profilerInfo2->GetILFunctionBodyAllocator(moduleId, &methodMalloc),
+                    COM_FAIL_MSG_RETURN_ERROR(HRESULT, m_profilerInfo2->GetILFunctionBodyAllocator(moduleId, &methodMalloc),
                         _T("    ::JITCompilationStarted(...) => GetILFunctionBodyAllocator=> 0x%X"));
 
-                    auto pNewMethod = static_cast<IMAGE_COR_ILMETHOD*>(methodMalloc->Alloc(instumentedMethod.GetMethodSize()));
+                    auto pNewMethod = static_cast<IMAGE_COR_ILMETHOD*>(methodMalloc->Alloc(static_cast<ULONG>(instumentedMethod.GetMethodSize())));
                     instumentedMethod.WriteMethod(pNewMethod);
-                    COM_FAIL_MSG_RETURN_ERROR(m_profilerInfo2->SetILFunctionBody(moduleId, functionToken, (LPCBYTE)pNewMethod),
+                    COM_FAIL_MSG_RETURN_ERROR(HRESULT, m_profilerInfo2->SetILFunctionBody(moduleId, functionToken, (LPCBYTE)pNewMethod),
                         _T("    ::JITCompilationStarted(...) => SetILFunctionBody => 0x%X"));
 
                     ULONG mapSize = instumentedMethod.GetILMapSize();
                     COR_IL_MAP * pMap = static_cast<COR_IL_MAP *>(CoTaskMemAlloc(mapSize * sizeof(COR_IL_MAP)));
                     instumentedMethod.PopulateILMap(mapSize, pMap);
-                    COM_FAIL_MSG_RETURN_ERROR(m_profilerInfo2->SetILInstrumentedCodeMap(functionId, TRUE, mapSize, pMap),
+                    COM_FAIL_MSG_RETURN_ERROR(HRESULT, m_profilerInfo2->SetILInstrumentedCodeMap(functionId, TRUE, mapSize, pMap),
                         _T("    ::JITCompilationStarted(...) => SetILInstrumentedCodeMap => 0x%X"));
 
                     // only do this for .NET4 and above as there are issues with earlier runtimes (Access Violations)
@@ -411,6 +412,7 @@ HRESULT STDMETHODCALLTYPE CCodeCoverage::JITCompilationStarted(
     return CProfilerBase::JITCompilationStarted(functionId, fIsSafeToBlock); 
 }
 
+#pragma warning (suppress : 26497) // No, this isn't a constexpr in waiting
 ipv CCodeCoverage::GetInstrumentPointVisit(){
 	return &InstrumentPointVisit;
 }
@@ -423,19 +425,27 @@ void CCodeCoverage::InstrumentMethod(ModuleID moduleId, Instrumentation::Method&
         auto pt = GetInstrumentPointVisit();
 
         InstructionList instructions;
-        if (seqPoints.size() > 0)
-            CoverageInstrumentation::InsertFunctionCall(instructions, pvsig, (FPTR)pt, seqPoints[0].UniqueId);
+		if (seqPoints.size() > 0)
+		{
+#pragma warning (suppress : 26490) // cast is simplest and safe
+			CoverageInstrumentation::InsertFunctionCall(instructions, pvsig, reinterpret_cast<FPTR>(pt), seqPoints[0].UniqueId);
+		}
+
         if (method.IsInstrumented(0, instructions)) return;
   
         CoverageInstrumentation::AddBranchCoverage([pvsig, pt](InstructionList& brinstructions, ULONG uniqueId)->Instruction*
         {
-            return CoverageInstrumentation::InsertFunctionCall(brinstructions, pvsig, (FPTR)pt, uniqueId);
+#pragma warning (suppress : 26490) // cast is simplest and safe
+			return CoverageInstrumentation::InsertFunctionCall(brinstructions, pvsig, reinterpret_cast<FPTR>(pt), uniqueId);
+#pragma warning (suppress : 4820) // 4 bytes padding
         }, method, brPoints, seqPoints);
 
         CoverageInstrumentation::AddSequenceCoverage([pvsig, pt](InstructionList& seqinstructions, ULONG uniqueId)->Instruction*
         {
-            return CoverageInstrumentation::InsertFunctionCall(seqinstructions, pvsig, (FPTR)pt, uniqueId);
-        }, method, seqPoints);
+#pragma warning (suppress : 26490) // cast is simplest and safe
+			return CoverageInstrumentation::InsertFunctionCall(seqinstructions, pvsig, reinterpret_cast<FPTR>(pt), uniqueId);
+#pragma warning (suppress : 4820) // 4 bytes padding
+		}, method, seqPoints);
     }
     else
     {
@@ -462,7 +472,7 @@ HRESULT CCodeCoverage::InstrumentMethodWith(ModuleID moduleId, mdToken functionT
 
     IMAGE_COR_ILMETHOD* pMethodHeader = nullptr;
 	ULONG iMethodSize = 0;
-    COM_FAIL_MSG_RETURN_ERROR(m_profilerInfo->GetILFunctionBody(moduleId, functionToken, (LPCBYTE*)&pMethodHeader, &iMethodSize),
+    COM_FAIL_MSG_RETURN_ERROR(HRESULT, m_profilerInfo->GetILFunctionBody(moduleId, functionToken, (LPCBYTE*)&pMethodHeader, &iMethodSize),
 		_T("    ::InstrumentMethodWith(...) => GetILFunctionBody => 0x%X"));
 
 	Instrumentation::Method instumentedMethod(pMethodHeader);
@@ -475,12 +485,12 @@ HRESULT CCodeCoverage::InstrumentMethodWith(ModuleID moduleId, mdToken functionT
 
 	// now to write the method back
 	CComPtr<IMethodMalloc> methodMalloc;
-	COM_FAIL_MSG_RETURN_ERROR(m_profilerInfo->GetILFunctionBodyAllocator(moduleId, &methodMalloc),
+	COM_FAIL_MSG_RETURN_ERROR(HRESULT, m_profilerInfo->GetILFunctionBodyAllocator(moduleId, &methodMalloc),
 		_T("    ::InstrumentMethodWith(...) => GetILFunctionBodyAllocator=> 0x%X"));
 
-	IMAGE_COR_ILMETHOD* pNewMethod = static_cast<IMAGE_COR_ILMETHOD*>(methodMalloc->Alloc(instumentedMethod.GetMethodSize()));
+	IMAGE_COR_ILMETHOD* pNewMethod = static_cast<IMAGE_COR_ILMETHOD*>(methodMalloc->Alloc(static_cast<ULONG>(instumentedMethod.GetMethodSize())));
 	instumentedMethod.WriteMethod(pNewMethod);
-	COM_FAIL_MSG_RETURN_ERROR(m_profilerInfo->SetILFunctionBody(moduleId, functionToken, (LPCBYTE)pNewMethod),
+	COM_FAIL_MSG_RETURN_ERROR(HRESULT, m_profilerInfo->SetILFunctionBody(moduleId, functionToken, (LPCBYTE)pNewMethod),
 		_T("    ::InstrumentMethodWith(...) => SetILFunctionBody => 0x%X"));
 
     return S_OK;
@@ -490,8 +500,8 @@ int CCodeCoverage::getSendVisitPointsTimerInterval()
 {
 	int timerIntervalValue = 0;
 	TCHAR timerIntervalString[1024] = { 0 };
-	if (::GetEnvironmentVariable(_T("OpenCover_SendVisitPointsTimerInterval"), timerIntervalString, 1024) > 0) {
-		timerIntervalValue = _tcstoul(timerIntervalString, nullptr, 10);
+	if (::GetEnvironmentVariable(_T("OpenCover_SendVisitPointsTimerInterval"), &timerIntervalString[0], 1024) > 0) {
+		timerIntervalValue = gsl::narrow<int>(_tcstoul(&timerIntervalString[0], nullptr, 10));
 		ATLTRACE(_T("    ::Initialize(...) => sendVisitPointsTimerInterval = %d"), timerIntervalValue);
 	}
 	return timerIntervalValue;

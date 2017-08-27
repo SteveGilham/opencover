@@ -28,27 +28,29 @@ namespace Instrumentation
 
 		template<typename value_type> value_type Read() {
 			_ASSERTE(m_bufferCurrent != NULL);
-			value_type value = *(value_type*)(m_bufferCurrent);
+#pragma warning (suppress : 26490) // simplest deserialization
+			value_type value = *reinterpret_cast<value_type*>(m_bufferCurrent);
 			Advance(sizeof(value_type));
 			return value;
 		}
 
 		template<typename value_type> void Write(value_type value) {
 			_ASSERTE(m_bufferCurrent != NULL);
-			*(value_type*)(m_bufferCurrent) = value;
+#pragma warning (suppress : 26490) // simplest serialization
+			*reinterpret_cast<value_type*>(m_bufferCurrent) = value;
 			Advance(sizeof(value_type));
 		}
 
 		template<typename value_type> void Align() {
 			_ASSERTE(m_bufferCurrent != NULL);
-			long i = sizeof(value_type) - 1;
-			long incr = ((m_position + i) & ~i) - m_position;
+			const long i = sizeof(value_type) - 1;
+			long incr = static_cast<long>(((m_position + i) & ~i) - m_position);
 			Advance(incr);
 		}
 
 		void Advance(long num) {
 			_ASSERTE(m_bufferCurrent != NULL);
-			m_bufferCurrent += num;
+			std::advance(m_bufferCurrent, num);
 			m_position += num;
 		}
 
@@ -56,5 +58,6 @@ namespace Instrumentation
 		BYTE * m_bufferBase;
 		BYTE * m_bufferCurrent;
 		unsigned long m_position;
+#pragma warning (suppress : 4820) // 4 bytes padding
 	};
 }

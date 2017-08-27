@@ -15,6 +15,12 @@ public:
 	}
 
 private:
+	ProfilerBaseTest(const ProfilerBaseTest &) = delete;
+	ProfilerBaseTest(const ProfilerBaseTest &&) = delete;
+	void operator= (const ProfilerBaseTest &) = delete;
+	void operator= (const ProfilerBaseTest &&) = delete;
+
+private:
 	void SetUp() override
 	{
 		CreateComObject(&testProfiler_);
@@ -41,6 +47,8 @@ protected:
 	CComObject<MockProfiler> *mockProfiler_;
 	CComObject<CTestProfiler> *testProfiler_;
 };
+
+#pragma warning (disable : 4100) // unused formals in mock lambdas
 
 TEST_F(ProfilerBaseTest, ChainedProfiler_HasHookedAllAvailableInterfaces)
 {

@@ -4,6 +4,8 @@
 
 #include "stdafx.h"
 
+#pragma warning (disable : 4061 4365 4571 4625 4626 4668 4820 5026 5027)
+
 // TODO: reference any additional headers you need in STDAFX.H
 // and not in this file
 

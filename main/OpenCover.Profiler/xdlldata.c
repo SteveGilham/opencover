@@ -14,5 +14,6 @@
 
 #include "dlldata.c"
 #include "OpenCover.Profiler_p.c"
-
+#else
+#pragma warning (disable : 4206)
 #endif //_MERGE_PROXYSTUB

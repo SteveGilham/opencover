@@ -78,7 +78,7 @@ typedef struct _MSG_TrackAssembly_Response
 typedef struct _MSG_GetSequencePoints_Request
 {
     MSG_Type type;
-    int functionToken;
+    unsigned int functionToken;
     WCHAR szProcessName[512];
     WCHAR szModulePath[512];
     WCHAR szAssemblyName[512];
@@ -94,7 +94,7 @@ typedef struct _MSG_GetSequencePoints_Response
 typedef struct _MSG_GetBranchPoints_Request
 {
     MSG_Type type;
-    int functionToken;
+    unsigned int functionToken;
     WCHAR szProcessName[512];
     WCHAR szModulePath[512];
     WCHAR szAssemblyName[512];
@@ -116,7 +116,7 @@ typedef struct _MSG_SendVisitPoints_Request
 typedef struct _MSG_TrackMethod_Request
 {
     MSG_Type type;
-    int functionToken;
+    unsigned int functionToken;
     WCHAR szModulePath[512];
     WCHAR szAssemblyName[512];
 } MSG_TrackMethod_Request;

@@ -25,13 +25,13 @@ using namespace Instrumentation;
 HRESULT CCodeCoverage::RegisterCuckoos(ModuleID moduleId){
 
 	CComPtr<IMetaDataEmit> metaDataEmit;
-	COM_FAIL_MSG_RETURN_ERROR(m_profilerInfo->GetModuleMetaData(moduleId,
+	COM_FAIL_MSG_RETURN_ERROR(HRESULT, m_profilerInfo->GetModuleMetaData(moduleId,
 		ofRead | ofWrite, IID_IMetaDataEmit, (IUnknown**)&metaDataEmit),
 		_T("    ::ModuleLoadFinished(...) => GetModuleMetaData => 0x%X"));
 	if (metaDataEmit == NULL) return S_OK;
 
 	CComPtr<IMetaDataImport> metaDataImport;
-	COM_FAIL_MSG_RETURN_ERROR(m_profilerInfo->GetModuleMetaData(moduleId,
+	COM_FAIL_MSG_RETURN_ERROR(HRESULT, m_profilerInfo->GetModuleMetaData(moduleId,
 		ofRead | ofWrite, IID_IMetaDataImport, (IUnknown**)&metaDataImport),
 		_T("    ::ModuleLoadFinished(...) => GetModuleMetaData => 0x%X"));
 	if (metaDataImport == NULL) return S_OK;
@@ -41,30 +41,30 @@ HRESULT CCodeCoverage::RegisterCuckoos(ModuleID moduleId){
 	{
 		RELTRACE(_T("::ModuleLoadFinished(...) => Adding methods to mscorlib..."));
 		mdMethodDef systemObjectCtor;
-		COM_FAIL_MSG_RETURN_ERROR(metaDataImport->FindMethod(systemObject, L".ctor",
-			ctorCallSignature, sizeof(ctorCallSignature), &systemObjectCtor),
+		COM_FAIL_MSG_RETURN_ERROR(HRESULT, metaDataImport->FindMethod(systemObject, L".ctor",
+			&ctorCallSignature[0], sizeof(ctorCallSignature), &systemObjectCtor),
 			_T("    ::ModuleLoadFinished(...) => FindMethod => 0x%X)"));
 
 		ULONG ulCodeRVA = 0;
-		COM_FAIL_MSG_RETURN_ERROR(metaDataImport->GetMethodProps(systemObjectCtor, NULL, NULL,
+		COM_FAIL_MSG_RETURN_ERROR(HRESULT, metaDataImport->GetMethodProps(systemObjectCtor, NULL, NULL,
 			0, NULL, NULL, NULL, NULL, &ulCodeRVA, NULL),
 			_T("    ::ModuleLoadFinished(...) => GetMethodProps => 0x%X"));
 
-		mdCustomAttribute customAttr;
-		mdToken attributeCtor;
-		mdTypeDef attributeTypeDef;
-		mdTypeDef nestToken;
+		mdCustomAttribute customAttr{};
+		mdToken attributeCtor{};
+		mdTypeDef attributeTypeDef{};
+		mdTypeDef nestToken{};
 
-		COM_FAIL_MSG_RETURN_ERROR(metaDataImport->FindTypeDefByName(CUCKOO_NEST_TYPE_NAME, mdTokenNil, &nestToken),
+		COM_FAIL_MSG_RETURN_ERROR(HRESULT, metaDataImport->FindTypeDefByName(CUCKOO_NEST_TYPE_NAME, mdTokenNil, &nestToken),
 			_T("    ::ModuleLoadFinished(...) => FindTypeDefByName => 0x%X"));
 
 		// create a method that we will mark up with the SecurityCriticalAttribute
-		COM_FAIL_MSG_RETURN_ERROR(metaDataEmit->DefineMethod(nestToken, CUCKOO_CRITICAL_METHOD_NAME,
-			mdPublic | mdStatic | mdHideBySig, visitedMethodCallSignature, sizeof(visitedMethodCallSignature),
+		COM_FAIL_MSG_RETURN_ERROR(HRESULT, metaDataEmit->DefineMethod(nestToken, CUCKOO_CRITICAL_METHOD_NAME,
+			mdPublic | mdStatic | mdHideBySig, &visitedMethodCallSignature[0], sizeof(visitedMethodCallSignature),
 			ulCodeRVA, miIL | miManaged | miPreserveSig | miNoInlining, &m_cuckooCriticalToken),
 			_T("    ::ModuleLoadFinished(...) => DefineMethod => 0x%X"));
 
-		COM_FAIL_MSG_RETURN_ERROR(metaDataImport->FindTypeDefByName(L"System.Security.SecurityCriticalAttribute",
+		COM_FAIL_MSG_RETURN_ERROR(HRESULT, metaDataImport->FindTypeDefByName(L"System.Security.SecurityCriticalAttribute",
 			NULL, &attributeTypeDef), _T("    :ModuleLoadFinished(...) => FindTypeDefByName => 0x%X"));
 
 		if (m_runtimeType == COR_PRF_DESKTOP_CLR)
@@ -73,7 +73,7 @@ HRESULT CCodeCoverage::RegisterCuckoos(ModuleID moduleId){
 			// default (no arguments) constructor fails with "0x801311C2 - known custom attribute value is bad" 
 			// when we try to attach it in .NET2 - .NET4 version doesn't care which one we use
 			mdTypeDef scopeToken;
-			COM_FAIL_MSG_RETURN_ERROR(metaDataImport->FindTypeDefByName(L"System.Security.SecurityCriticalScope", mdTokenNil, &scopeToken),
+			COM_FAIL_MSG_RETURN_ERROR(HRESULT, metaDataImport->FindTypeDefByName(L"System.Security.SecurityCriticalScope", mdTokenNil, &scopeToken),
 				_T("    ::ModuleLoadFinished(...) => FindTypeDefByName => 0x%X"));
 
 			ULONG sigLength = 4;
@@ -88,40 +88,40 @@ HRESULT CCodeCoverage::RegisterCuckoos(ModuleID moduleId){
 
 			sigLength += CorSigCompressToken(scopeToken, &ctorCallSignatureEnum[4]);
 
-			COM_FAIL_MSG_RETURN_ERROR(metaDataImport->FindMember(attributeTypeDef,
-				L".ctor", ctorCallSignatureEnum, sigLength, &attributeCtor),
+			COM_FAIL_MSG_RETURN_ERROR(HRESULT, metaDataImport->FindMember(attributeTypeDef,
+				L".ctor", &ctorCallSignatureEnum[0], sigLength, &attributeCtor),
 				_T("    ::ModuleLoadFinished(...) => FindMember => 0x%X"));
 
 			unsigned char blob[] = { 0x01, 0x00, 0x01, 0x00, 0x00, 0x00 }; // prolog U2 plus an enum of I4 (little-endian)
-			COM_FAIL_MSG_RETURN_ERROR(metaDataEmit->DefineCustomAttribute(m_cuckooCriticalToken, attributeCtor, blob, sizeof(blob), &customAttr),
+			COM_FAIL_MSG_RETURN_ERROR(HRESULT, metaDataEmit->DefineCustomAttribute(m_cuckooCriticalToken, attributeCtor, &blob[0], sizeof(blob), &customAttr),
 				_T("    ::ModuleLoadFinished(...) => DefineCustomAttribute => 0x%X"));
 		}
 		else
 		{
 			// silverlight only has one .ctor for this type
-			COM_FAIL_MSG_RETURN_ERROR(metaDataImport->FindMember(attributeTypeDef,
-				L".ctor", ctorCallSignature, sizeof(ctorCallSignature), &attributeCtor),
+			COM_FAIL_MSG_RETURN_ERROR(HRESULT, metaDataImport->FindMember(attributeTypeDef,
+				L".ctor", &ctorCallSignature[0], sizeof(ctorCallSignature), &attributeCtor),
 				_T("    ::ModuleLoadFinished(...) => FindMember => 0x%X"));
 
-			COM_FAIL_MSG_RETURN_ERROR(metaDataEmit->DefineCustomAttribute(m_cuckooCriticalToken, attributeCtor, NULL, 0, &customAttr),
+			COM_FAIL_MSG_RETURN_ERROR(HRESULT, metaDataEmit->DefineCustomAttribute(m_cuckooCriticalToken, attributeCtor, NULL, 0, &customAttr),
 				_T("    ::ModuleLoadFinished(...) => DefineCustomAttribute => 0x%X"));
 		}
 
 		// create a method that we will mark up with the SecuritySafeCriticalAttribute
-		COM_FAIL_MSG_RETURN_ERROR(metaDataEmit->DefineMethod(nestToken, CUCKOO_SAFE_METHOD_NAME,
-			mdPublic | mdStatic | mdHideBySig, visitedMethodCallSignature, sizeof(visitedMethodCallSignature),
+		COM_FAIL_MSG_RETURN_ERROR(HRESULT, metaDataEmit->DefineMethod(nestToken, CUCKOO_SAFE_METHOD_NAME,
+			mdPublic | mdStatic | mdHideBySig, &visitedMethodCallSignature[0], sizeof(visitedMethodCallSignature),
 			ulCodeRVA, miIL | miManaged | miPreserveSig | miNoInlining, &m_cuckooSafeToken),
 			_T("    ::ModuleLoadFinished(...) => DefineMethod => 0x%X"));
 
-		COM_FAIL_MSG_RETURN_ERROR(metaDataImport->FindTypeDefByName(L"System.Security.SecuritySafeCriticalAttribute",
+		COM_FAIL_MSG_RETURN_ERROR(HRESULT, metaDataImport->FindTypeDefByName(L"System.Security.SecuritySafeCriticalAttribute",
 			NULL, &attributeTypeDef),
 			_T("    ::ModuleLoadFinished(...) => FindTypeDefByName => 0x%X"));
 
-		COM_FAIL_MSG_RETURN_ERROR(metaDataImport->FindMember(attributeTypeDef,
-			L".ctor", ctorCallSignature, sizeof(ctorCallSignature), &attributeCtor),
+		COM_FAIL_MSG_RETURN_ERROR(HRESULT, metaDataImport->FindMember(attributeTypeDef,
+			L".ctor", &ctorCallSignature[0], sizeof(ctorCallSignature), &attributeCtor),
 			_T("    ::ModuleLoadFinished(...) => FindMember => 0x%X"));
 
-		COM_FAIL_MSG_RETURN_ERROR(metaDataEmit->DefineCustomAttribute(m_cuckooSafeToken, attributeCtor, NULL, 0, &customAttr),
+		COM_FAIL_MSG_RETURN_ERROR(HRESULT, metaDataEmit->DefineCustomAttribute(m_cuckooSafeToken, attributeCtor, NULL, 0, &customAttr),
 			_T("    ::ModuleLoadFinished(...) => DefineCustomAttribute => 0x%X"));
 
 		RELTRACE(_T("::ModuleLoadFinished(...) => Added methods to mscorlib"));
@@ -137,21 +137,21 @@ mdMemberRef CCodeCoverage::RegisterSafeCuckooMethod(ModuleID moduleId, const WCH
 	// for modules we are going to instrument add our reference to the method marked 
 	// with the SecuritySafeCriticalAttribute
 	CComPtr<IMetaDataEmit> metaDataEmit;
-	COM_FAIL_MSG_RETURN_ERROR(m_profilerInfo->GetModuleMetaData(moduleId,
+	COM_FAIL_MSG_RETURN_ERROR(mdMemberRef, m_profilerInfo->GetModuleMetaData(moduleId,
 		ofRead | ofWrite, IID_IMetaDataEmit, (IUnknown**)&metaDataEmit),
 		_T("    ::RegisterSafeCuckooMethod(...) => GetModuleMetaData => 0x%X"));
 
 	mdModuleRef mscorlibRef;
-	COM_FAIL_MSG_RETURN_ERROR(GetModuleRef(moduleId, moduleName, mscorlibRef),
+	COM_FAIL_MSG_RETURN_ERROR(mdMemberRef, GetModuleRef(moduleId, moduleName, mscorlibRef),
 		_T("    ::RegisterSafeCuckooMethod(...) => GetModuleRef => 0x%X"));
 
 	mdTypeDef nestToken;
-	COM_FAIL_MSG_RETURN_ERROR(metaDataEmit->DefineTypeRefByName(mscorlibRef, CUCKOO_NEST_TYPE_NAME, &nestToken),
+	COM_FAIL_MSG_RETURN_ERROR(mdMemberRef, metaDataEmit->DefineTypeRefByName(mscorlibRef, CUCKOO_NEST_TYPE_NAME, &nestToken),
 		_T("    ::RegisterSafeCuckooMethod(...) => DefineTypeRefByName => 0x%X"));
 
 	mdMemberRef cuckooSafeToken;
-	COM_FAIL_MSG_RETURN_ERROR(metaDataEmit->DefineMemberRef(nestToken, CUCKOO_SAFE_METHOD_NAME,
-		visitedMethodCallSignature, sizeof(visitedMethodCallSignature), &cuckooSafeToken),
+	COM_FAIL_MSG_RETURN_ERROR(mdMemberRef, metaDataEmit->DefineMemberRef(nestToken, CUCKOO_SAFE_METHOD_NAME,
+		&visitedMethodCallSignature[0], sizeof(visitedMethodCallSignature), &cuckooSafeToken),
 		_T("    ::RegisterSafeCuckooMethod(...) => DefineMemberRef => 0x%X"));
 
 	return cuckooSafeToken;
@@ -167,15 +167,20 @@ HRESULT CCodeCoverage::AddCriticalCuckooBody(ModuleID moduleId)
 	void(__fastcall *pt)(ULONG) = GetInstrumentPointVisit();
 
 	BYTE data[] = { (0x01 << 2) | CorILMethod_TinyFormat, CEE_RET };
-	Instrumentation::Method criticalMethod((IMAGE_COR_ILMETHOD*)data);
+#pragma warning (suppress : 26490) // cast is simplest and safe
+	Instrumentation::Method criticalMethod(reinterpret_cast<IMAGE_COR_ILMETHOD*>(&data[0]));
 	InstructionList instructions;
+#pragma warning (disable : 26409) // new being used in a controlled fashion
 	instructions.push_back(new Instruction(CEE_LDARG_0));
 #ifdef _WIN64
-	instructions.push_back(new Instruction(CEE_LDC_I8, (ULONGLONG)pt));
+#pragma warning (suppress : 26490) // cast is simplest and safe
+	instructions.push_back(new Instruction(CEE_LDC_I8, reinterpret_cast<ULONGLONG>(pt)));
 #else
-	instructions.push_back(new Instruction(CEE_LDC_I4, (ULONG)pt));
+#pragma warning (suppress : 26490) // cast is simplest and safe
+	instructions.push_back(new Instruction(CEE_LDC_I4, reinterpret_cast<ULONG>(pt)));
 #endif
 	instructions.push_back(new Instruction(CEE_CALLI, pvsig));
+#pragma warning (default : 26409)
 
 	criticalMethod.InsertInstructionsAtOffset(0, instructions);
 
@@ -193,10 +198,13 @@ HRESULT CCodeCoverage::AddSafeCuckooBody(ModuleID moduleId)
 	ATLTRACE(_T("::AddSafeCuckooBody => Adding SafeVisited..."));
 
 	BYTE data[] = { (0x01 << 2) | CorILMethod_TinyFormat, CEE_RET };
-	Instrumentation::Method criticalMethod((IMAGE_COR_ILMETHOD*)data);
+#pragma warning (suppress : 26490) // cast is simplest and safe
+	Instrumentation::Method criticalMethod(reinterpret_cast<IMAGE_COR_ILMETHOD*>(&data[0]));
 	InstructionList instructions;
+#pragma warning (disable : 26409) // new being used in a controlled fashion
 	instructions.push_back(new Instruction(CEE_LDARG_0));
 	instructions.push_back(new Instruction(CEE_CALL, m_cuckooCriticalToken));
+#pragma warning (default : 26409)
 
 	criticalMethod.InsertInstructionsAtOffset(0, instructions);
 
@@ -222,13 +230,13 @@ HRESULT CCodeCoverage::CuckooSupportCompilation(
 	{
 		if (m_cuckooCriticalToken == functionToken)
 		{
-			COM_FAIL_MSG_RETURN_ERROR(AddCriticalCuckooBody(moduleId),
+			COM_FAIL_MSG_RETURN_ERROR(HRESULT, AddCriticalCuckooBody(moduleId),
 				_T("    ::JITCompilationStarted(...) => AddCriticalCuckooBody => 0x%X"));
 		}
 
 		if (m_cuckooSafeToken == functionToken)
 		{
-			COM_FAIL_MSG_RETURN_ERROR(AddSafeCuckooBody(moduleId),
+			COM_FAIL_MSG_RETURN_ERROR(HRESULT, AddSafeCuckooBody(moduleId),
 				_T("    ::JITCompilationStarted(...) => AddSafeCuckooBody => 0x%X"));
 		}
 	}

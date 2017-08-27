@@ -23,6 +23,7 @@ namespace Communication
 		_thread = std::thread([=]()
 		{
 			StartTimerMethod(timerIntervalMsec);
+#pragma warning (suppress : 4820) // 4 bytes padding
 		});
 	}
 

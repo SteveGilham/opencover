@@ -1,5 +1,5 @@
 #pragma once
-#include "../OpenCover.Profiler/ProfileBase.h"
+#include <OpenCover.Profiler/ProfileBase.h>
 
 class ATL_NO_VTABLE CTestProfiler :
 	public CComObjectRootEx<CComMultiThreadModel>,

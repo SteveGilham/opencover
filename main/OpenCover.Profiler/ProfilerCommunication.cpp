@@ -6,10 +6,10 @@
 #include "StdAfx.h"
 #include "ProfilerCommunication.h"
 
-//#include <concrt.h>
-//#include <TlHelp32.h>
-
+#pragma warning (push)
+#pragma warning (disable : 4365 4820)
 #include <sstream>
+#pragma warning (pop)
 
 #define ONERROR_GOEXIT(hr) if (FAILED(hr)) goto Exit
 #define COM_WAIT_LONG 60000
@@ -39,6 +39,7 @@ namespace Communication
 		if (!_mutexCommunication.IsValid())
 			return false;
 
+#pragma warning (suppress : 26494 26496)
 		USES_CONVERSION;
 		ATLTRACE(_T("ProfilerCommunication::Initialise(...) => Initialised mutexes => %s"), W2CT(sharedKey.c_str()));
 
@@ -219,6 +220,7 @@ namespace Communication
 		_sendTimer.Start([=]()
 		{
 			SendRemainingVisitPoints(safe_mode);
+#pragma warning (suppress : 4820) // 7 bytes padding
 		}, sendVisitPointsTimerInterval);
 
 		return _hostCommunicationActive;
@@ -234,10 +236,10 @@ namespace Communication
 		auto it = _visitmap.find(osThreadID);
 		if (it == _visitmap.end() || it->second == nullptr)
 		{
-			auto p = new MSG_SendVisitPoints_Request();
+			auto p = std::make_unique<MSG_SendVisitPoints_Request>();
 			p->count = 0;
-			_visitmap[osThreadID] = p;
-			return p;
+			_visitmap[osThreadID] = p.get();
+			return p.release();
 		}
 		return it->second;
 	}
@@ -253,10 +255,9 @@ namespace Communication
 	void ProfilerCommunication::ThreadDestroyed(ThreadID threadID) {
 		ATL::CComCritSecLock<ATL::CComAutoCriticalSection> lock(_critThreads);
 		auto osThreadId = _threadmap[threadID];
-		auto points = _visitmap[osThreadId];
-		SendThreadVisitPoints(points);
-		delete _visitmap[osThreadId];
+		auto points = std::unique_ptr<MSG_SendVisitPoints_Request>(_visitmap[osThreadId]); // take ownership
 		_visitmap[osThreadId] = nullptr;
+		SendThreadVisitPoints(points.get());
 	}
 
 	void ProfilerCommunication::SendRemainingThreadBuffers() {
@@ -279,7 +280,8 @@ namespace Communication
 	{
 		auto osThreadId = ::GetCurrentThreadId();
 		auto pVisitPoints = GetVisitMapForOSThread(osThreadId);
-		pVisitPoints->points[pVisitPoints->count].UniqueId = (uniqueId | msgType);
+		const auto buffer = gsl::as_span<VisitPoint>(&pVisitPoints->points[0], VP_BUFFER_SIZE);
+		buffer[pVisitPoints->count].UniqueId = (uniqueId | msgType);
 		if (++pVisitPoints->count == VP_BUFFER_SIZE)
 		{
 			SendThreadVisitPoints(pVisitPoints);
@@ -321,7 +323,8 @@ namespace Communication
 			return;
 
 		handle_exception([=]() {
-			_pVisitPoints->points[_pVisitPoints->count].UniqueId = (uniqueId | msgType);
+			const auto buffer = gsl::as_span<VisitPoint>(&_pVisitPoints->points[0], VP_BUFFER_SIZE);
+			buffer[_pVisitPoints->count].UniqueId = (uniqueId | msgType);
 		}, _T("AddVisitPointToBuffer"));
 
 		if (++_pVisitPoints->count == VP_BUFFER_SIZE)
@@ -347,8 +350,10 @@ namespace Communication
 			_memoryResults.FlushViewOfFile();
 
 			DWORD dwSignal = _eventProfilerHasResults.SignalAndWait(_eventResultsHaveBeenReceived, _short_wait);
-			if (WAIT_OBJECT_0 != dwSignal)
-				throw CommunicationException(dwSignal, _short_wait);
+			if (WAIT_OBJECT_0 != dwSignal) {
+#pragma warning (suppress : 4670 4673) // cannot be caught as std::exception as this base type is inacessible;
+				throw CommunicationException(dwSignal, _short_wait);  // but is always caught as itself -- so not a problem
+			}
 			_eventResultsHaveBeenReceived.Reset();
 		}
 		catch (const CommunicationException& ex) {
@@ -364,7 +369,7 @@ namespace Communication
 	{
 		seqPoints.clear();
 		brPoints.clear();
-		bool ret = GetSequencePoints(functionToken, pModulePath, pAssemblyName, seqPoints);
+		const bool ret = GetSequencePoints(functionToken, pModulePath, pAssemblyName, seqPoints);
 
 		if (ret) {
 			GetBranchPoints(functionToken, pModulePath, pAssemblyName, brPoints);
@@ -384,10 +389,12 @@ namespace Communication
 		{
 			_pMSG->getSequencePointsRequest.type = MSG_GetSequencePoints;
 			_pMSG->getSequencePointsRequest.functionToken = functionToken;
+#pragma warning (suppress : 26494 26496)
 			USES_CONVERSION;
-			wcscpy_s(_pMSG->getSequencePointsRequest.szProcessName, T2CW(_processName.c_str()));
-			wcscpy_s(_pMSG->getSequencePointsRequest.szModulePath, pModulePath);
-			wcscpy_s(_pMSG->getSequencePointsRequest.szAssemblyName, pAssemblyName);
+			wcscpy_s((&_pMSG->getSequencePointsRequest.szProcessName)[0], T2CW(_processName.c_str()));
+			wcscpy_s((&_pMSG->getSequencePointsRequest.szModulePath)[0], pModulePath);
+			wcscpy_s((&_pMSG->getSequencePointsRequest.szAssemblyName)[0], pAssemblyName);
+#pragma warning (suppress : 4820) // 4 bytes padding
 		},
 			[=, &points]()->BOOL
 		{
@@ -398,11 +405,12 @@ namespace Communication
 				return false;
 			}
 
-			for (int i = 0; i < _pMSG->getSequencePointsResponse.count; i++)
-				points.push_back(_pMSG->getSequencePointsResponse.points[i]);
+			const auto received = gsl::as_span<SequencePoint>(&_pMSG->getSequencePointsResponse.points[0], _pMSG->getSequencePointsResponse.count);
+			points.insert(points.end(), received.cbegin(), received.cend());
 			BOOL hasMore = _pMSG->getSequencePointsResponse.hasMore;
 			::ZeroMemory(_pMSG, MSG_UNION_SIZE);
 			return hasMore;
+#pragma warning (suppress : 4820) // 4 bytes padding
 		}
 			, _short_wait
 			, _T("GetSequencePoints"));
@@ -421,10 +429,12 @@ namespace Communication
 		{
 			_pMSG->getBranchPointsRequest.type = MSG_GetBranchPoints;
 			_pMSG->getBranchPointsRequest.functionToken = functionToken;
+#pragma warning (suppress : 26494 26496)
 			USES_CONVERSION;
-			wcscpy_s(_pMSG->getBranchPointsRequest.szProcessName, T2CW(_processName.c_str()));
-			wcscpy_s(_pMSG->getBranchPointsRequest.szModulePath, pModulePath);
-			wcscpy_s(_pMSG->getBranchPointsRequest.szAssemblyName, pAssemblyName);
+			wcscpy_s((&_pMSG->getBranchPointsRequest.szProcessName)[0], T2CW(_processName.c_str()));
+			wcscpy_s((&_pMSG->getBranchPointsRequest.szModulePath)[0], pModulePath);
+			wcscpy_s((&_pMSG->getBranchPointsRequest.szAssemblyName)[0], pAssemblyName);
+#pragma warning (suppress : 4820) // 4 bytes padding
 		},
 			[=, &points]()->BOOL
 		{
@@ -435,11 +445,12 @@ namespace Communication
 				return false;
 			}
 
-			for (int i = 0; i < _pMSG->getBranchPointsResponse.count; i++)
-				points.push_back(_pMSG->getBranchPointsResponse.points[i]);
+			const auto received = gsl::as_span<BranchPoint>(&_pMSG->getBranchPointsResponse.points[0], _pMSG->getBranchPointsResponse.count);
+			points.insert(points.end(), received.cbegin(), received.cend());
 			BOOL hasMore = _pMSG->getBranchPointsResponse.hasMore;
 			::ZeroMemory(_pMSG, MSG_UNION_SIZE);
 			return hasMore;
+#pragma warning (suppress : 4820) // 4 bytes padding
 		}
 			, _short_wait
 			, _T("GetBranchPoints"));
@@ -457,10 +468,11 @@ namespace Communication
 			[=]()
 		{
 			_pMSG->trackAssemblyRequest.type = MSG_TrackAssembly;
+#pragma warning (suppress : 26494 26496)
 			USES_CONVERSION;
-			wcscpy_s(_pMSG->trackAssemblyRequest.szProcessName, T2CW(_processName.c_str()));
-			wcscpy_s(_pMSG->trackAssemblyRequest.szModulePath, pModulePath);
-			wcscpy_s(_pMSG->trackAssemblyRequest.szAssemblyName, pAssemblyName);
+			wcscpy_s((&_pMSG->trackAssemblyRequest.szProcessName)[0], T2CW(_processName.c_str()));
+			wcscpy_s((&_pMSG->trackAssemblyRequest.szModulePath)[0], pModulePath);
+			wcscpy_s((&_pMSG->trackAssemblyRequest.szAssemblyName)[0], pAssemblyName);
 		},
 			[=, &response]()->BOOL
 		{
@@ -474,7 +486,7 @@ namespace Communication
 		return response;
 	}
 
-	bool ProfilerCommunication::TrackMethod(mdToken functionToken, WCHAR* pModulePath, WCHAR* pAssemblyName, ULONG &uniqueId)
+	bool ProfilerCommunication::TrackMethod(mdToken functionToken, const WCHAR* pModulePath, const WCHAR* pAssemblyName, ULONG &uniqueId)
 	{
 		if (!_hostCommunicationActive)
 			return false;
@@ -485,8 +497,9 @@ namespace Communication
 		{
 			_pMSG->trackMethodRequest.type = MSG_TrackMethod;
 			_pMSG->trackMethodRequest.functionToken = functionToken;
-			wcscpy_s(_pMSG->trackMethodRequest.szModulePath, pModulePath);
-			wcscpy_s(_pMSG->trackMethodRequest.szAssemblyName, pAssemblyName);
+			wcscpy_s((&_pMSG->trackMethodRequest.szModulePath)[0], pModulePath);
+			wcscpy_s((&_pMSG->trackMethodRequest.szAssemblyName)[0], pAssemblyName);
+#pragma warning (suppress : 4820) // 4 bytes padding
 		},
 			[=, &response, &uniqueId]()->BOOL
 		{
@@ -520,7 +533,7 @@ namespace Communication
 				_pMSG->allocateBufferRequest.lBufferSize = bufferSize;
 				_pMSG->allocateBufferRequest.dwVersionHigh = _version_high;
 				_pMSG->allocateBufferRequest.dwVersionLow = _version_low;
-
+#pragma warning (suppress : 4820) // 4 bytes padding
 			},
 				[=, &response, &bufferId]()->BOOL
 			{
@@ -585,8 +598,9 @@ namespace Communication
 			[=]()
 		{
 			_pMSG->trackProcessRequest.type = MSG_TrackProcess;
+#pragma warning (suppress : 26494 26496)
 			USES_CONVERSION;
-			wcscpy_s(_pMSG->trackProcessRequest.szProcessName, T2CW(_processName.c_str()));
+			wcscpy_s((&_pMSG->trackProcessRequest.szProcessName)[0], T2CW(_processName.c_str()));
 		},
 			[=, &response]()->BOOL
 		{
@@ -600,12 +614,14 @@ namespace Communication
 	}
 
 	void ProfilerCommunication::report_runtime(const std::runtime_error& re, const tstring &msg) const {
+#pragma warning (suppress : 26494 26496)
 		USES_CONVERSION;
 #pragma warning (suppress : 6255) // can't fix ATL macro
 		RELTRACE(_T("Runtime error: %s - %s"), msg.c_str(), A2T(re.what()));
 	}
 
 	void ProfilerCommunication::report_exception(const std::exception& re, const tstring &msg) const {
+#pragma warning (suppress : 26494 26496)
 		USES_CONVERSION;
 #pragma warning (suppress : 6255) // can't fix ATL macro
 		RELTRACE(_T("Error occurred: %s - %s"), msg.c_str(), A2T(re.what()));
@@ -644,6 +660,7 @@ namespace Communication
 			report_exception(ex, message);
 			throw;
 		}
+#pragma warning (suppress : 4571) // structured exceptions (SEH) are no longer caught
 		catch (...)
 		{
 			// catch any other errors (that we have no information about)
@@ -695,6 +712,7 @@ namespace Communication
 				message.c_str(), ex.getReason(), ex.getTimeout());
 			_hostCommunicationActive = false;
 		}
+#pragma warning (suppress : 4571) // structured exceptions (SEH) are no longer caught
 		catch (...)
 		{
 			_hostCommunicationActive = false;

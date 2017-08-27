@@ -73,7 +73,7 @@ STDAPI DllInstall(BOOL bInstall, _In_opt_ LPCWSTR pszCmdLine)
 	static const wchar_t szUserSwitch[] = L"user";
 	if (pszCmdLine != NULL)
 	{
-		if (_wcsnicmp(pszCmdLine, szUserSwitch, _countof(szUserSwitch)) == 0)
+		if (_wcsnicmp(pszCmdLine, &szUserSwitch[0], _countof(szUserSwitch)) == 0)
 		{
 			ATL::AtlSetPerUserRegistration(true);
 		}

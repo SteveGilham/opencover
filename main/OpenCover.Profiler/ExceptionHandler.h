@@ -26,6 +26,7 @@ namespace Instrumentation
 	private:
 #endif
 		CorExceptionFlag m_handlerType;
+#pragma warning (suppress : 4820) // 4 bytes padding
 		Instruction * m_tryStart;
 		Instruction * m_tryEnd;
 		Instruction * m_handlerStart;
@@ -36,5 +37,6 @@ namespace Instrumentation
 
 	public:
 		friend class Method;
+#pragma warning (suppress : 4820) // 4 bytes padding
 	};
 }

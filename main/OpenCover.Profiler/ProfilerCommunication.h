@@ -10,9 +10,13 @@
 #include "Messages.h"
 #include "Timer.h"
 
+#pragma warning(push)
+// system header files are very noisy
+#pragma warning (disable : 4061 4365 4571 4619 4634 4820 5038)
 #include <exception>
 
 #include <concurrent_unordered_map.h>
+#pragma warning (pop)
 
 namespace Communication
 {
@@ -32,10 +36,16 @@ namespace Communication
 
 		bool Initialise(TCHAR* key, TCHAR *ns, TCHAR *processName);
 
+	private:
+		ProfilerCommunication(const ProfilerCommunication &) = delete;
+		ProfilerCommunication(const ProfilerCommunication &&) = delete;
+		void operator=(const ProfilerCommunication &) = delete;
+		void operator=(const ProfilerCommunication &&) = delete;
+
 	public:
 		bool TrackAssembly(WCHAR* pModulePath, WCHAR* pAssemblyName);
 		bool GetPoints(mdToken functionToken, WCHAR* pModulePath, WCHAR* pAssemblyName, std::vector<SequencePoint> &seqPoints, std::vector<BranchPoint> &brPoints);
-		bool TrackMethod(mdToken functionToken, WCHAR* pModulePath, WCHAR* pAssemblyName, ULONG &uniqueId);
+		bool TrackMethod(mdToken functionToken, const WCHAR* pModulePath, const WCHAR* pAssemblyName, ULONG &uniqueId);
 		inline void AddTestEnterPoint(ULONG uniqueId) { AddVisitPointToBuffer(uniqueId, IT_MethodEnter); }
 		inline void AddTestLeavePoint(ULONG uniqueId) { AddVisitPointToBuffer(uniqueId, IT_MethodLeave); }
 		inline void AddTestTailcallPoint(ULONG uniqueId) { AddVisitPointToBuffer(uniqueId, IT_MethodTailcall); }
@@ -107,6 +117,7 @@ namespace Communication
 		bool _hostCommunicationActive;
 
 	private:
+#pragma warning (suppress : 4820) // 7 bytes padding
 		ATL::CComAutoCriticalSection _critThreads;
 		//std::unordered_map<ThreadID, ULONG> _threadmap;
 		//std::unordered_map<ULONG, MSG_SendVisitPoints_Request*> _visitmap;
@@ -129,6 +140,7 @@ namespace Communication
 	private:
 		DWORD _version_high;
 		DWORD _version_low;
+#pragma warning (suppress : 4820) // 4 bytes padding x86 release
 		Timer _sendTimer;
 
 	private:

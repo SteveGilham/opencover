@@ -1,11 +1,14 @@
 ﻿#include "stdafx.h"
-#include "..\OpenCover.Profiler\Method.h"
-#include "..\OpenCover.Profiler\CoverageInstrumentation.h"
+#include <OpenCover.Profiler\Method.h>
+#include <OpenCover.Profiler\CoverageInstrumentation.h>
 
 // NOTE: Using pseudo IL code to exercise the code and is not necessarily runnable IL
 using namespace Instrumentation;
 
 class RegressionTest : public ::testing::Test {
+public:
+	RegressionTest() {}
+
 	void SetUp() override
 	{
 
@@ -15,6 +18,12 @@ class RegressionTest : public ::testing::Test {
 	{
 
 	}
+
+private:
+	RegressionTest(const RegressionTest &) = delete;
+	RegressionTest(const RegressionTest &&) = delete;
+	void operator= (const RegressionTest &) = delete;
+	void operator= (const RegressionTest &&) = delete;
 };
 
 TEST_F(RegressionTest, CanHandleOptimizedCode_Issue663)

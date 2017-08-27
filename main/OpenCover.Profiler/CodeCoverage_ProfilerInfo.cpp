@@ -16,18 +16,18 @@ std::wstring CCodeCoverage::GetModulePath(ModuleID moduleId)
 {
     ULONG dwNameSize = 512;
     WCHAR szModulePath[512] = {};
-    COM_FAIL_MSG_RETURN_OTHER(m_profilerInfo->GetModuleInfo(moduleId, NULL, dwNameSize, &dwNameSize, szModulePath, NULL), std::wstring(),
+    COM_FAIL_MSG_RETURN_OTHER(m_profilerInfo->GetModuleInfo(moduleId, NULL, dwNameSize, &dwNameSize, &szModulePath[0], NULL), std::wstring(),
         _T("    ::GetModulePath(ModuleID) => GetModuleInfo => 0x%X"));
-    return std::wstring(szModulePath);
+    return std::wstring(&szModulePath[0]);
 }
 
 std::wstring CCodeCoverage::GetModulePath(ModuleID moduleId, AssemblyID *pAssemblyID)
 {
     ULONG dwNameSize = 512;
     WCHAR szModulePath[512] = {};
-    COM_FAIL_MSG_RETURN_OTHER(m_profilerInfo->GetModuleInfo(moduleId, NULL, dwNameSize, &dwNameSize, szModulePath, pAssemblyID), std::wstring(),
+    COM_FAIL_MSG_RETURN_OTHER(m_profilerInfo->GetModuleInfo(moduleId, NULL, dwNameSize, &dwNameSize, &szModulePath[0], pAssemblyID), std::wstring(),
         _T("    ::GetModulePath(ModuleID,AssemblyID*) => GetModuleInfo => 0x%X"));
-    return std::wstring(szModulePath);
+    return std::wstring(&szModulePath[0]);
 }
 
 /// <summary>
@@ -37,9 +37,9 @@ std::wstring CCodeCoverage::GetAssemblyName(AssemblyID assemblyId)
 {
     ULONG dwNameSize = 512; 
     WCHAR szAssemblyName[512] = {};
-    COM_FAIL_MSG_RETURN_OTHER(m_profilerInfo->GetAssemblyInfo(assemblyId, dwNameSize, &dwNameSize, szAssemblyName, NULL, NULL), std::wstring(),
+    COM_FAIL_MSG_RETURN_OTHER(m_profilerInfo->GetAssemblyInfo(assemblyId, dwNameSize, &dwNameSize, &szAssemblyName[0], NULL, NULL), std::wstring(),
         _T("    ::GetAssemblyName(AssemblyID) => GetAssemblyInfo => 0x%X"));
-    return std::wstring(szAssemblyName);
+    return std::wstring(&szAssemblyName[0]);
 }
 
 /// <summary>
@@ -69,7 +69,7 @@ mdSignature CCodeCoverage::GetMethodSignatureToken_I4(ModuleID moduleID)
         _T("    ::GetMethodSignatureToken_I4(ModuleID) => GetModuleMetaData => 0x%X"));
 
     mdSignature pmsig ;
-    COM_FAIL_MSG_RETURN_OTHER(metaDataEmit->GetTokenFromSig(unmanagedCallSignature, sizeof(unmanagedCallSignature), &pmsig), 0,
+    COM_FAIL_MSG_RETURN_OTHER(metaDataEmit->GetTokenFromSig(&unmanagedCallSignature[0], sizeof(unmanagedCallSignature), &pmsig), 0,
         _T("    ::GetMethodSignatureToken_I4(ModuleID) => GetTokenFromSig => 0x%X"));
     return pmsig;
 }
@@ -78,12 +78,12 @@ mdSignature CCodeCoverage::GetMethodSignatureToken_I4(ModuleID moduleID)
 HRESULT CCodeCoverage::GetModuleRef(ModuleID moduleId, const WCHAR*moduleName, mdModuleRef &mscorlibRef)
 {
     CComPtr<IMetaDataEmit> metaDataEmit;
-    COM_FAIL_MSG_RETURN_ERROR(m_profilerInfo->GetModuleMetaData(moduleId, 
+    COM_FAIL_MSG_RETURN_ERROR(HRESULT, m_profilerInfo->GetModuleMetaData(moduleId, 
         ofRead | ofWrite, IID_IMetaDataEmit, (IUnknown**)&metaDataEmit), 
         _T("GetModuleRef(...) => GetModuleMetaData => 0x%X"));      
     
     CComPtr<IMetaDataAssemblyEmit> metaDataAssemblyEmit;
-    COM_FAIL_MSG_RETURN_ERROR(metaDataEmit->QueryInterface(
+    COM_FAIL_MSG_RETURN_ERROR(HRESULT, metaDataEmit->QueryInterface(
         IID_IMetaDataAssemblyEmit, (void**)&metaDataAssemblyEmit), 
         _T("GetModuleRef(...) => QueryInterface => 0x%X"));
 
@@ -111,7 +111,7 @@ HRESULT CCodeCoverage::GetModuleRef4000(IMetaDataAssemblyEmit *metaDataAssemblyE
     assembly.usBuildNumber = 0; 
     assembly.usRevisionNumber = 0;
     BYTE publicKey[] = { 0xB7, 0x7A, 0x5C, 0x56, 0x19, 0x34, 0xE0, 0x89 };
-    COM_FAIL_MSG_RETURN_ERROR(metaDataAssemblyEmit->DefineAssemblyRef(publicKey, 
+    COM_FAIL_MSG_RETURN_ERROR(HRESULT, metaDataAssemblyEmit->DefineAssemblyRef(&publicKey[0],
         sizeof(publicKey), moduleName, &assembly, NULL, 0, 0, 
         &mscorlibRef), _T("GetModuleRef4000(...) => DefineAssemblyRef => 0x%X"));
 
@@ -127,7 +127,7 @@ HRESULT CCodeCoverage::GetModuleRef2000(IMetaDataAssemblyEmit *metaDataAssemblyE
     assembly.usBuildNumber = 0; 
     assembly.usRevisionNumber = 0;
     BYTE publicKey[] = { 0xB7, 0x7A, 0x5C, 0x56, 0x19, 0x34, 0xE0, 0x89 };
-    COM_FAIL_MSG_RETURN_ERROR(metaDataAssemblyEmit->DefineAssemblyRef(publicKey, 
+    COM_FAIL_MSG_RETURN_ERROR(HRESULT, metaDataAssemblyEmit->DefineAssemblyRef(&publicKey[0],
         sizeof(publicKey), moduleName, &assembly, NULL, 0, 0, &mscorlibRef), 
         _T("GetModuleRef2000(...) => DefineAssemblyRef => 0x%X"));
 
@@ -144,7 +144,7 @@ HRESULT CCodeCoverage::GetModuleRef2050(IMetaDataAssemblyEmit *metaDataAssemblyE
     assembly.usRevisionNumber = 0;
 
     BYTE publicKey[] = { 0x7C, 0xEC, 0x85, 0xD7, 0xBE, 0xA7, 0x79, 0x8E };
-    COM_FAIL_MSG_RETURN_ERROR(metaDataAssemblyEmit->DefineAssemblyRef(publicKey, 
+    COM_FAIL_MSG_RETURN_ERROR(HRESULT, metaDataAssemblyEmit->DefineAssemblyRef(&publicKey[0],
         sizeof(publicKey), moduleName, &assembly, NULL, 0, 0, &mscorlibRef), 
         _T("GetModuleRef2050(...) => DefineAssemblyRef => 0x%X"));
 
@@ -159,18 +159,18 @@ std::wstring CCodeCoverage::GetTypeAndMethodName(FunctionID functionId)
 	COM_FAIL_MSG_RETURN_OTHER(m_profilerInfo->GetTokenAndMetaDataFromFunction(functionId, IID_IMetaDataImport, (IUnknown **)&metaDataImport2, &functionToken),
 		empty, _T("GetTokenAndMetaDataFromFunction"));
 
-	mdTypeDef classId;
+	mdTypeDef classId{};
 	WCHAR szMethodName[512] = {};
-	COM_FAIL_MSG_RETURN_OTHER(metaDataImport2->GetMethodProps(functionToken, &classId, szMethodName, 512, NULL, NULL, NULL, NULL, NULL, NULL),
+	COM_FAIL_MSG_RETURN_OTHER(metaDataImport2->GetMethodProps(functionToken, &classId, &szMethodName[0], 512, NULL, NULL, NULL, NULL, NULL, NULL),
 		empty, _T("GetMethodProps"));
 
 	WCHAR szTypeName[512] = {};
-	COM_FAIL_MSG_RETURN_OTHER(metaDataImport2->GetTypeDefProps(classId, szTypeName, 512, NULL, NULL, NULL),
+	COM_FAIL_MSG_RETURN_OTHER(metaDataImport2->GetTypeDefProps(classId, &szTypeName[0], 512, NULL, NULL, NULL),
 		empty, _T("GetTypeDefProps"));
 
-	std::wstring methodName = szTypeName;
+	std::wstring methodName{ &szTypeName[0] };
 	methodName += L"::";
-	methodName += szMethodName;
+	methodName += &szMethodName[0];
 
 	//ATLTRACE(_T("::GetTypeAndMethodName(%s)"), W2CT(methodName.c_str()));
 

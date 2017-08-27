@@ -1,11 +1,15 @@
 #include "stdafx.h"
-#include "..\OpenCover.Profiler\Method.h"
+#include <OpenCover.Profiler\Method.h>
 #include <memory>
 
 // NOTE: Using pseudo IL code to exercise the code and is not necessarily runnable IL
 using namespace Instrumentation;
 
 class InstrumentationTest : public ::testing::Test {
+public:
+	InstrumentationTest() {}
+
+private:
 	void SetUp() override
     {
         
@@ -15,6 +19,12 @@ class InstrumentationTest : public ::testing::Test {
     {
         
     }
+
+private:
+	InstrumentationTest(const InstrumentationTest &) = delete;
+	InstrumentationTest(const InstrumentationTest &&) = delete;
+	void operator= (const InstrumentationTest &) = delete;
+	void operator= (const InstrumentationTest &&) = delete;
 };
 
 TEST_F(InstrumentationTest, CanReadMethodWithTinyHeader)
@@ -570,12 +580,12 @@ TEST_F(InstrumentationTest, CanWriteMethod)
 {
     BYTE data[] = {(8 << 2) + CorILMethod_TinyFormat, 
         CEE_BR_S, 0x05,
-        CEE_BR, 0x00, 0x00, 0x00, 0x00,
+        static_cast<BYTE>(CEE_BR), 0x00, 0x00, 0x00, 0x00,
         CEE_RET};
 
     Method instrument(reinterpret_cast<IMAGE_COR_ILMETHOD*>(data));
 
-    int size = instrument.GetMethodSize();
+    unsigned int size = gsl::narrow<unsigned int>(instrument.GetMethodSize());
 
 	std::unique_ptr<BYTE[]> buffer(new BYTE[size]);
 
@@ -608,12 +618,12 @@ TEST_F(InstrumentationTest, CanWriteMethodWithExceptions)
 
 	auto pHeader = reinterpret_cast<IMAGE_COR_ILMETHOD_FAT*>(data);
     pHeader->Flags = CorILMethod_FatFormat | CorILMethod_MoreSects;
-    pHeader->CodeSize = 25;
+    pHeader->CodeSize = static_cast<DWORD>(25);
     pHeader->Size = 3;
 
     Method instrument(reinterpret_cast<IMAGE_COR_ILMETHOD*>(data));
 
-    int size = instrument.GetMethodSize();
+	unsigned int size = gsl::narrow<unsigned int>(instrument.GetMethodSize());
 
 	std::unique_ptr<BYTE[]> buffer(new BYTE[size]);
 
@@ -725,7 +735,7 @@ TEST_F(InstrumentationTest, CanIdentifyInstrumentedMethods)
 	instrument.InsertInstructionsAtOffset(0, instructions);
 
 	// now we need to pretend we are rejitting 
-    int size = instrument.GetMethodSize();
+	unsigned int size = gsl::narrow<unsigned int>(instrument.GetMethodSize());
 
 	std::unique_ptr<BYTE[]> buffer(new BYTE[size]);
 	auto newMethod = reinterpret_cast<COR_ILMETHOD_FAT*>(buffer.get());

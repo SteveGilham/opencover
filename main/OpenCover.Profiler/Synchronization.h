@@ -72,6 +72,7 @@ namespace Synchronization
 		explicit CScopedLock<T>(T&entity) : m_entity(entity) { m_entity.Enter(); }
 		~CScopedLock() { m_entity.Leave(); }
 	private:
+		void operator= (const CScopedLock &) = delete;
 		T &m_entity;
 	};
 

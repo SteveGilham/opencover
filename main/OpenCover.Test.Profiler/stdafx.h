@@ -5,9 +5,21 @@
 
 #pragma once
 
+#pragma warning (disable : 4710) // method not inlined
+#pragma warning (disable : 4711) // method selected to be inlined
+#pragma warning (disable : 4514) // unreferenced inline : minwinbase.h(434):/* Leave 4514 disabled.  It's an unneeded warning anyway. */
+
+#pragma warning(push)
+// system header files are very noisy
+#pragma warning (disable : 4191 4263 4264 4355 4365 4458 4571 4623 4625 4626 4628 4668 4755 4774 4820 4826 4987 5026 5027 5038 )
+
 #include "targetver.h"
 
 #define _CRT_SECURE_NO_WARNINGS
+
+#include <gsl.h>
+#pragma warning (suppress : 5031)// work around bug in gsl.h
+#pragma warning(pop)             // work around bug in gsl.h -- span.h doesn't close its push
 
 #ifdef _DEBUG
 #define _CRTDBG_MAP_ALLOC
@@ -47,6 +59,7 @@
 // when it's fused.
 #include <gtest/gtest.h>
 
+#pragma warning(pop)
 /*
 #define _TEST_METHOD_EX_EXPANDER(_testMethod)\
 _testMethod { try

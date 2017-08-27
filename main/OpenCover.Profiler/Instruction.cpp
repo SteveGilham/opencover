@@ -57,10 +57,11 @@ namespace Instrumentation
 		if (m_branches.size() != b.m_branches.size()) 
 			return false;
 		auto it2 = b.m_branches.begin();
-		for (auto it = m_branches.begin(); it != m_branches.end(); ++it, ++it2)
+		for (const auto it : m_branches)
 		{
-			if (!(*it)->Equivalent(*(*it2)))
+			if (!it->Equivalent(*(*it2)))
 				return false;
+			++it2;
 		}
 		return true;
 	}

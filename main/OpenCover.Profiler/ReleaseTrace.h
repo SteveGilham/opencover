@@ -17,7 +17,7 @@ class CReleaseTrace
 	const wchar_t* WPREFIX = L"OpenCover: (Profiler) ";
 
 #pragma warning(push)
-#pragma warning(disable : 4793)
+#pragma warning(disable : 4793 26481 26492) // pointer arithmetic and casting away const in va_start macro
 	void __cdecl operator()(
 		const char *pszFmt, 
 		...) const
@@ -31,7 +31,7 @@ class CReleaseTrace
 		sprintf_s(&buffer[0], prefixLength + 1, "%s", PREFIX);
 
         va_start(ptr, pszFmt);
-		_vsnprintf_s(&buffer[prefixLength], nBytes, nBytes - 2, pszFmt, ptr);
+		_vsnprintf_s(&buffer[prefixLength], static_cast<size_t>(nBytes), static_cast<size_t>(nBytes - 2), pszFmt, ptr);
         va_end(ptr);
 
         buffer[prefixLength + nBytes - 2] = '\n';
@@ -43,7 +43,7 @@ class CReleaseTrace
 #pragma warning(pop)
 
 #pragma warning(push)
-#pragma warning(disable : 4793)
+#pragma warning(disable : 4793 26481 26492) // pointer arithmetic and casting aw3ay const in va_start macro
 	void __cdecl operator()(
 		const wchar_t *pszFmt, 
 		...) const
@@ -57,7 +57,7 @@ class CReleaseTrace
 		swprintf_s(&buffer[0], prefixLength + 1, L"%s", WPREFIX);
 		
         va_start(ptr, pszFmt);
-		_vsnwprintf_s(&buffer[prefixLength], nBytes, nBytes - 2, pszFmt, ptr);
+		_vsnwprintf_s(&buffer[prefixLength], static_cast<size_t>(nBytes), static_cast<size_t>(nBytes - 2), pszFmt, ptr);
         va_end(ptr);
 
         buffer[prefixLength + nBytes - 2] = L'\n';

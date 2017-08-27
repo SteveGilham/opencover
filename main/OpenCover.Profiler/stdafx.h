@@ -13,6 +13,14 @@
 #define STRICT
 #endif
 
+#pragma warning (disable : 4710) // method not inlined
+#pragma warning (disable : 4711) // method selected to be inlined
+#pragma warning (disable : 4514) // unreferenced inline : minwinbase.h(434):/* Leave 4514 disabled.  It's an unneeded warning anyway. */
+
+#pragma warning(push)
+// system header files are very noisy
+#pragma warning (disable : 4191 4263 4264 4355 4365 4458 4571 4623 4625 4626 4668 4755 4774 4820 4987 5026 5027 26461)
+
 #include "targetver.h"
 
 #define _ATL_APARTMENT_THREADED
@@ -24,6 +32,10 @@
 #define ATL_NO_ASSERT_ON_DESTROY_NONEXISTENT_WINDOW
 
 #include "resource.h"
+#include <gsl.h>
+#pragma warning (suppress : 5031)// work around bug in gsl.h
+#pragma warning(pop)             // work around bug in gsl.h -- span.h doesn't close its push
+
 #include <atlbase.h>
 #include <atlcom.h>
 #include <atlctl.h>
@@ -41,6 +53,9 @@
 #include <string>
 #include <vector>
 #include <unordered_map>
+#include <algorithm>
+
+#pragma warning(pop)
 
 #ifdef UNICODE
 #define tstring std::wstring

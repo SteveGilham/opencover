@@ -34,7 +34,7 @@ namespace CoverageInstrumentation
 
             if ((*it)->m_isBranch && ((*it)->m_origOffset != -1))
             {
-                OperationDetails &details = Instrumentation::Operations::m_mapNameOperationDetails[(*it)->m_operation];
+                const OperationDetails &details = Instrumentation::Operations::m_mapNameOperationDetails[(*it)->m_operation];
                 if (details.controlFlow == COND_BRANCH)
                 {
 					auto *pCurrent = *it;
@@ -45,29 +45,33 @@ namespace CoverageInstrumentation
 
 					Instrumentation::InstructionList instructions;
 
-					auto bpp = std::find_if(points.begin(), points.end(), [pCurrent, idx](BranchPoint &bp){return bp.Offset == pCurrent->m_origOffset && bp.Path == idx;});
+#pragma warning (suppress : 4820) // 4 bytes padding
+					const auto bpp = std::find_if(points.begin(), points.end(), [pCurrent, idx](const BranchPoint &bp){return bp.Offset == pCurrent->m_origOffset && bp.Path == idx;});
 					if (bpp == points.end()) // we can't find information on a branch to instrument (this may happen if it was skipped/ignored during initial investigation by the host process)
 						continue;
 
                     ULONG uniqueId = (*bpp).UniqueId;
                     ULONG storedId = uniqueId; // store branch 0 ID (default/else)
 
-                    auto pJumpNext = new Instrumentation::Instruction(CEE_BR);
+                    auto pJumpNext = std::make_unique<Instrumentation::Instruction>(CEE_BR);
                     pJumpNext->m_isBranch = true;
                     pJumpNext->m_branches.push_back(pNext);
 
-                    instructions.push_back(pJumpNext);
+                    // Yield the owndership of the pointer to the collection
+                    Instrumentation::Instruction * pJumpNextNonOwner{ nullptr };
+                    instructions.push_back(pJumpNextNonOwner = pJumpNext.release());
 
                     // collect branches instrumentation
                     for(auto sbit = pCurrent->m_branches.begin(); sbit != pCurrent->m_branches.end(); ++sbit)
                     {
                         idx++;
-                        uniqueId = (*std::find_if(points.begin(), points.end(), [pCurrent, idx](BranchPoint &bp){return bp.Offset == pCurrent->m_origOffset && bp.Path == idx;})).UniqueId;
+#pragma warning (suppress : 4820) // 4 bytes padding
+						uniqueId = (*std::find_if(points.begin(), points.end(), [pCurrent, idx](const BranchPoint &bp){return bp.Offset == pCurrent->m_origOffset && bp.Path == idx;})).UniqueId;
                         auto pBranchInstrument = instrumentMethod(instructions, uniqueId);
-                        auto pBranchJump = new Instrumentation::Instruction(CEE_BR);
+                        auto pBranchJump = std::make_unique<Instrumentation::Instruction>(CEE_BR);
                         pBranchJump->m_isBranch = true;
                         pBranchJump->m_branches.push_back(*sbit);
-                        instructions.push_back(pBranchJump);
+                        instructions.push_back(pBranchJump.release());
                         *sbit = pBranchInstrument; // rewire conditional branch to instrumentation
                         
                     }
@@ -87,7 +91,7 @@ namespace CoverageInstrumentation
                     // pNext: IL_xx Whatever it is 
                     
                     auto pElse = instrumentMethod(instructions, storedId);
-                    pJumpNext->m_branches[0] = pElse; // rewire pJumpNext
+                    pJumpNextNonOwner->m_branches[0] = pElse; // rewire pJumpNext
 
                     // ReSharper disable once CppPossiblyErroneousEmptyStatements
                     for (it = method.m_instructions.begin(); *it != pNext; ++it);
