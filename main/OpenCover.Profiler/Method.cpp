@@ -323,7 +323,7 @@ namespace Instrumentation
 	/// beforehand</remarks>
 	Instruction * Method::GetInstructionAtOffset(long offset)
 	{
-		auto ptr = std::find_if(
+		const auto ptr = std::find_if(
 			m_instructions.begin(),
 			m_instructions.end(),
 			[=](auto i) -> bool { return i->m_offset == offset; }
@@ -354,7 +354,7 @@ namespace Instrumentation
 	/// </example>
 	Instruction * Method::GetInstructionAtOffset(long offset, bool isFinally, bool isFault, bool isFilter, bool isTyped)
 	{
-		auto ptr = std::find_if(
+		const auto ptr = std::find_if(
 			m_instructions.begin(),
 			m_instructions.end(),
 			[=](auto i) -> bool { return i->m_offset == offset; }

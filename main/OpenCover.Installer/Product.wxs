@@ -3,11 +3,11 @@
   <?include ..\..\build\Version\Version.wxi ?>
 
   <Product Id="*" Name="OpenCover" Language="1033" Version="$(var.Version)"
-      Manufacturer="OpenCover" UpgradeCode="2250c3f1-d9ba-44d8-b4db-25f91fe92dc6" >
+      Manufacturer="OpenCover" UpgradeCode="2250C3F1-D9BA-44D8-B4DB-25F91FE92DC6" >
 
     <Package InstallerVersion="200" Compressed="yes" />
 
-    <Upgrade Id="2250c3f1-d9ba-44d8-b4db-25f91fe92dc6">
+    <Upgrade Id="2250C3F1-D9BA-44D8-B4DB-25F91FE92DC6">
       <UpgradeVersion OnlyDetect="no" Property="PREVIOUSFOUND" Minimum="1.0.0.0" IncludeMinimum="yes"
                             Maximum="$(var.Version)" IncludeMaximum="no" />
 
