@@ -11,11 +11,12 @@
 
 #pragma warning(push)
 // system header files are very noisy
-#pragma warning (disable : 4191 4263 4264 4355 4365 4458 4571 4623 4625 4626 4628 4668 4755 4774 4820 4826 4987 5026 5027 5038 )
+#pragma warning (disable : 4191 4263 4264 4355 4365 4458 4571 4582 4583 4623 4625 4626 4628 4668 4755 4774 4820 4868 4987 5026 5027 5038 26409 26461 26481 26493 26495 26496)
 
 #include "targetver.h"
 
 #define _CRT_SECURE_NO_WARNINGS
+#include <range/v3/all.hpp>
 
 #include <gsl.h>
 #pragma warning (suppress : 5031)// work around bug in gsl.h

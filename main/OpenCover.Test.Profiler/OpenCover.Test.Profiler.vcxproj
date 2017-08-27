@@ -104,7 +104,7 @@
       <Optimization>Disabled</Optimization>
       <PreprocessorDefinitions>TEST_FRAMEWORK;WIN32;_WINDOWS;_DEBUG;_CONSOLE;%(PreprocessorDefinitions);_VARIADIC_MAX=10</PreprocessorDefinitions>
       <RuntimeLibrary>MultiThreadedDebug</RuntimeLibrary>
-      <AdditionalIncludeDirectories>..\..\tools\gmock-1.7.0;..\..\tools\gmock-1.7.0\include;..\..\tools\gmock-1.7.0\gtest;..\..\tools\gmock-1.7.0\gtest\include;..;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories>$(SolutionDir)..\Range-V3-VS2015\include;..\..\tools\gmock-1.7.0;..\..\tools\gmock-1.7.0\include;..\..\tools\gmock-1.7.0\gtest;..\..\tools\gmock-1.7.0\gtest\include;..;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
     </ClCompile>
     <Link>
       <SubSystem>Console</SubSystem>
@@ -123,7 +123,7 @@
       <Optimization>Disabled</Optimization>
       <PreprocessorDefinitions>TEST_FRAMEWORK;WIN32;_WINDOWS;_DEBUG;_CONSOLE;%(PreprocessorDefinitions);_VARIADIC_MAX=10</PreprocessorDefinitions>
       <RuntimeLibrary>MultiThreadedDebug</RuntimeLibrary>
-      <AdditionalIncludeDirectories>..\..\tools\gmock-1.7.0;..\..\tools\gmock-1.7.0\include;..\..\tools\gmock-1.7.0\gtest;..\..\tools\gmock-1.7.0\gtest\include;..;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories>$(SolutionDir)..\Range-V3-VS2015\include;..\..\tools\gmock-1.7.0;..\..\tools\gmock-1.7.0\include;..\..\tools\gmock-1.7.0\gtest;..\..\tools\gmock-1.7.0\gtest\include;..;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
     </ClCompile>
     <Link>
       <SubSystem>Console</SubSystem>
@@ -144,7 +144,7 @@
       <IntrinsicFunctions>true</IntrinsicFunctions>
       <PreprocessorDefinitions>TEST_FRAMEWORK;WIN32;_WINDOWS;NDEBUG;_CONSOLE;%(PreprocessorDefinitions);_VARIADIC_MAX=10</PreprocessorDefinitions>
       <RuntimeLibrary>MultiThreaded</RuntimeLibrary>
-      <AdditionalIncludeDirectories>..\..\tools\gmock-1.7.0;..\..\tools\gmock-1.7.0\include;..\..\tools\gmock-1.7.0\gtest;..\..\tools\gmock-1.7.0\gtest\include;..;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories>$(SolutionDir)..\Range-V3-VS2015\include;..\..\tools\gmock-1.7.0;..\..\tools\gmock-1.7.0\include;..\..\tools\gmock-1.7.0\gtest;..\..\tools\gmock-1.7.0\gtest\include;..;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
     </ClCompile>
     <Link>
       <SubSystem>Console</SubSystem>
@@ -164,7 +164,7 @@
       <IntrinsicFunctions>true</IntrinsicFunctions>
       <PreprocessorDefinitions>TEST_FRAMEWORK;WIN32;_WINDOWS;NDEBUG;_CONSOLE;%(PreprocessorDefinitions);_VARIADIC_MAX=10</PreprocessorDefinitions>
       <RuntimeLibrary>MultiThreaded</RuntimeLibrary>
-      <AdditionalIncludeDirectories>..\..\tools\gmock-1.7.0;..\..\tools\gmock-1.7.0\include;..\..\tools\gmock-1.7.0\gtest;..\..\tools\gmock-1.7.0\gtest\include;..;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories>$(SolutionDir)..\Range-V3-VS2015\include;..\..\tools\gmock-1.7.0;..\..\tools\gmock-1.7.0\include;..\..\tools\gmock-1.7.0\gtest;..\..\tools\gmock-1.7.0\gtest\include;..;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
     </ClCompile>
     <Link>
       <SubSystem>Console</SubSystem>

@@ -669,12 +669,7 @@ namespace Instrumentation
 	/// copy the data between them</remarks>
 	void Method::InsertInstructionsAtOffset(long offset, const InstructionList &instructions)
 	{
-		InstructionList clone;
-		for (auto item : instructions)
-		{
-			auto copy = std::make_unique<Instruction>(*item);
-			clone.push_back(copy.release());
-		}
+		auto clone = instructions | ranges::v3::view::transform([](auto item) -> Instruction* { return std::make_unique<Instruction>(*item).release();});
 
 		auto it = std::find_if(
 			m_instructions.begin(),
@@ -698,7 +693,7 @@ namespace Instrumentation
 		{
 			// move instruction to after the clone block
 			auto orig = *(*it2);
-			for (unsigned int i = 0; i < clone.size(); i++)
+			for (unsigned int i = 0; i < instructions.size(); i++)
 			{
 				const auto temp = it2;
 				++it2;
@@ -718,12 +713,7 @@ namespace Instrumentation
 	/// copy the data between them</remarks>
 	void Method::InsertInstructionsAtOriginalOffset(long origOffset, const InstructionList &instructions)
 	{
-		InstructionList clone;
-		for (auto item : instructions)
-		{
-			auto copy = std::make_unique<Instruction>(*item);
-			clone.push_back(copy.release());
-		}
+		auto clone = instructions | ranges::v3::view::transform([](auto item) -> Instruction* { return std::make_unique<Instruction>(*item).release();});
 
 		long actualOffset{ 0 };
 		Instruction* actualInstruction{ nullptr };
@@ -753,7 +743,7 @@ namespace Instrumentation
 			{
 				// move instruction to after the clone block
 				Instruction orig = *(*ptr);
-				for (unsigned int i = 0; i < clone.size(); i++)
+				for (unsigned int i = 0; i < instructions.size(); i++)
 				{
 					const auto temp = ptr;
 					++ptr;
@@ -805,18 +795,13 @@ namespace Instrumentation
 	{
 		_ASSERTE(GetILMapSize() == mapSize);
 
-		const auto span = gsl::as_span<COR_IL_MAP>(maps, gsl::narrow<ptrdiff_t>(mapSize));
-
-		auto map = span.begin();
-		for(auto item : m_instructions)
+		auto originalInstructions = m_instructions | ranges::v3::view::filter([](auto item) -> bool {return item->m_origOffset != -1;});
+		auto mapping = ranges::v3::view::counted(maps, gsl::narrow<ptrdiff_t>(mapSize));
+		for (auto item : ranges::v3::view::zip(originalInstructions, mapping))
 		{
-			if (item->m_origOffset != -1)
-			{
-				map->fAccurate = TRUE;
-				map->oldOffset = static_cast<ULONG32>(item->m_origOffset);
-				map->newOffset = static_cast<ULONG32>(item->m_offset);
-				++map;
-			}
+			item.second.fAccurate = TRUE;
+			item.second.oldOffset = static_cast<ULONG32>(item.first->m_origOffset);
+			item.second.newOffset = static_cast<ULONG32>(item.first->m_offset);
 		}
 	}
 }
