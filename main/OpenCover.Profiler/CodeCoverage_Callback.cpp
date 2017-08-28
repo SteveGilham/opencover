@@ -15,7 +15,7 @@ UINT_PTR CCodeCoverage::FunctionMapper2(FunctionID functionId, void* clientData,
     if(profiler == NULL)
         return 0;
 
-    UINT_PTR retVal = 0;
+	UINT_PTR retVal{ 0 };
     std::wstring modulePath;
     mdToken functionToken;
     ModuleID moduleId;

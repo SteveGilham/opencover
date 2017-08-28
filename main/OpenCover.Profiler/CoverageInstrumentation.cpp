@@ -9,27 +9,22 @@ namespace CoverageInstrumentation
 
     Instruction* InsertInjectedMethod(InstructionList &instructions, mdMethodDef injectedMethodDef, ULONG uniqueId)
     {
-#pragma warning (disable : 26409) // new being used in a controlled fashion
-		gsl::owner<Instruction*> firstInstruction = new Instruction(CEE_LDC_I4, uniqueId);
-        instructions.push_back(firstInstruction);
-        instructions.push_back(new Instruction(CEE_CALL, injectedMethodDef));
-        return firstInstruction;
-#pragma warning (default : 26409)
+		auto firstInstruction = std::make_unique<Instruction>(CEE_LDC_I4, uniqueId);
+        instructions.push_back(firstInstruction.get());
+        instructions.push_back(std::make_unique<Instruction>(CEE_CALL, injectedMethodDef).release());
+        return firstInstruction.release();
 	}
 
     Instruction* InsertFunctionCall(InstructionList &instructions, mdSignature pvsig, FPTR pt, ULONGLONG uniqueId)
     {
-#pragma warning (disable : 26409) // new being used in a controlled fashion
-		gsl::owner<Instruction*> firstInstruction = new Instruction(CEE_LDC_I4, uniqueId);
-        instructions.push_back(firstInstruction);
+		auto firstInstruction = std::make_unique<Instruction>(CEE_LDC_I4, uniqueId);
+        instructions.push_back(firstInstruction.get());
 #ifdef _WIN64
-		instructions.push_back(new Instruction(CEE_LDC_I8, static_cast<ULONGLONG>(pt)));
+		instructions.push_back(std::make_unique<Instruction>(CEE_LDC_I8, static_cast<ULONGLONG>(pt)).release());
 #else
-		instructions.push_back(new Instruction(CEE_LDC_I4, static_cast<ULONG>(pt)));
+		instructions.push_back(std::make_unique<Instruction>(CEE_LDC_I4, static_cast<ULONG>(pt)).release());
 #endif
-        instructions.push_back(new Instruction(CEE_CALLI, pvsig));
-#pragma warning (default : 26409)
-
-        return firstInstruction;
+        instructions.push_back(std::make_unique<Instruction>(CEE_CALLI, pvsig).release());
+        return firstInstruction.release();
     }
 }

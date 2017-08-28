@@ -104,14 +104,14 @@ EXTERN_C HRESULT STDAPICALLTYPE LoadOpenCoverSupportAssembly(IUnknown *pUnk)
 
 HRESULT CCodeCoverage::OpenCoverSupportInitialize(
     /* [in] */ IUnknown *pICorProfilerInfoUnk) {
-    TCHAR ext[1024] = { 0 };
+    TCHAR ext[1024]{ 0 };
     ::GetEnvironmentVariable(_T("CHAIN_EXTERNAL_PROFILER"), &ext[0], 1024);
     if (ext[0] != 0) {
         ATLTRACE(_T("::OpenCoverSupportInitialize"));
 
         ATLTRACE(_T("    ::OpenCoverSupportInitialize(...) => ext = %s"), &ext[0]);
 
-        TCHAR loc[1024] = { 0 };
+        TCHAR loc[1024]{ 0 };
         ::GetEnvironmentVariable(_T("CHAIN_EXTERNAL_PROFILER_LOCATION"), &loc[0], 1024);
         ATLTRACE(_T("    ::OpenCoverSupportInitialize(...) => loc = %s"), &loc[0]);
 

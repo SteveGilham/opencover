@@ -24,8 +24,8 @@ HRESULT STDMETHODCALLTYPE CCodeCoverage::Initialize(
 }
 
 void GetVersion(LPTSTR szVersionFile, DWORD *dwVersionHigh, DWORD *dwVersionLow) {
-	UINT   size = 0;
-	VS_FIXEDFILEINFO *verInfo = NULL;
+	UINT   size{ 0 };
+	VS_FIXEDFILEINFO *verInfo{ nullptr };
 	auto  verSize = GetFileVersionInfoSize(szVersionFile, nullptr);
 
 	if (verSize != NULL)
@@ -61,16 +61,16 @@ void GetVersion(LPTSTR szVersionFile, DWORD *dwVersionHigh, DWORD *dwVersionLow)
 HRESULT CCodeCoverage::OpenCoverInitialise(IUnknown *pICorProfilerInfoUnk){
 	ATLTRACE(_T("::OpenCoverInitialise"));
 
-    OLECHAR szGuid[40]={0};
+    OLECHAR szGuid[40]{0};
     (void) ::StringFromGUID2(CLSID_CodeCoverage, &szGuid[0], 40);
     RELTRACE(L"    ::Initialize(...) => CLSID == %s", &szGuid[0]);
     //::OutputDebugStringW(szGuid);
 
-	TCHAR szExeName[MAX_PATH];
+	TCHAR szExeName[MAX_PATH]{ 0 };
     GetModuleFileName(nullptr, &szExeName[0], MAX_PATH);
     RELTRACE(_T("    ::Initialize(...) => EXE = %s"), &szExeName[0]);
 
-    TCHAR szModuleName[MAX_PATH];
+	TCHAR szModuleName[MAX_PATH]{ 0 };
     GetModuleFileName(_AtlModule.m_hModule, &szModuleName[0], MAX_PATH);
     RELTRACE(_T("    ::Initialize(...) => PROFILER = %s"), &szModuleName[0]);
     //::OutputDebugStringW(szModuleName);
@@ -102,40 +102,40 @@ HRESULT CCodeCoverage::OpenCoverInitialise(IUnknown *pICorProfilerInfoUnk){
         ATLTRACE(_T("    ::Initialize (Runtime %d)"), m_runtimeType);
     }
 
-    TCHAR key[1024] = {0};
+    TCHAR key[1024]{0};
     ::GetEnvironmentVariable(_T("OpenCover_Profiler_Key"), &key[0], 1024);
     RELTRACE(_T("    ::Initialize(...) => key = %s"), &key[0]);
 
-    TCHAR ns[1024] = {0};
+    TCHAR ns[1024]{0};
     ::GetEnvironmentVariable(_T("OpenCover_Profiler_Namespace"), &ns[0], 1024);
     ATLTRACE(_T("    ::Initialize(...) => ns = %s"), &ns[0]);
 
-	TCHAR instrumentation[1024] = { 0 };
+	TCHAR instrumentation[1024]{ 0 };
 	::GetEnvironmentVariable(_T("OpenCover_Profiler_Instrumentation"), &instrumentation[0], 1024);
 	ATLTRACE(_T("    ::Initialize(...) => instrumentation = %s"), &instrumentation[0]);
 
-	TCHAR diagnostics[1024] = { 0 };
+	TCHAR diagnostics[1024]{ 0 };
 	::GetEnvironmentVariable(_T("OpenCover_Profiler_Diagnostics"), &diagnostics[0], 1024);
 	ATLTRACE(_T("    ::Initialize(...) => Diagnostics = %s"), &diagnostics[0]);
 
-    TCHAR threshold[1024] = {0};
+    TCHAR threshold[1024]{0};
     ::GetEnvironmentVariable(_T("OpenCover_Profiler_Threshold"), &threshold[0], 1024);
     m_threshold = _tcstoul(&threshold[0], nullptr, 10);
     ATLTRACE(_T("    ::Initialize(...) => threshold = %ul"), m_threshold);
 
-    TCHAR tracebyTest[1024] = {0};
+    TCHAR tracebyTest[1024]{0};
     ::GetEnvironmentVariable(_T("OpenCover_Profiler_TraceByTest"), &tracebyTest[0], 1024);
     m_tracingEnabled = _tcslen(&tracebyTest[0]) != 0;
 #pragma warning (suppress : 26485) // string used as pointer
 	ATLTRACE(_T("    ::Initialize(...) => tracingEnabled = %s (%s)"), m_tracingEnabled ? _T("true") : _T("false"), &tracebyTest[0]);
 
-    TCHAR safeMode[1024] = { 0 };
+    TCHAR safeMode[1024]{ 0 };
     ::GetEnvironmentVariable(_T("OpenCover_Profiler_SafeMode"), &safeMode[0], 1024);
     safe_mode_ = m_tracingEnabled || (_tcslen(&safeMode[0]) != 0);
 #pragma warning (suppress : 26485) // string used as pointer
 	ATLTRACE(_T("    ::Initialize(...) => safeMode = %s (%s)"), safe_mode_ ? _T("true") : _T("false"), &safeMode[0]);
 
-    TCHAR shortwait[1024] = { 0 };
+    TCHAR shortwait[1024]{ 0 };
     if (::GetEnvironmentVariable(_T("OpenCover_Profiler_ShortWait"), &shortwait[0], 1024) > 0) {
         _shortwait = _tcstoul(&shortwait[0], nullptr, 10);
         if (_shortwait < 10000) 
@@ -470,19 +470,19 @@ void CCodeCoverage::InstrumentMethod(ModuleID moduleId, Instrumentation::Method&
 
 HRESULT CCodeCoverage::InstrumentMethodWith(ModuleID moduleId, mdToken functionToken, InstructionList &instructions){
 
-    IMAGE_COR_ILMETHOD* pMethodHeader = nullptr;
-	ULONG iMethodSize = 0;
+	IMAGE_COR_ILMETHOD* pMethodHeader{ nullptr };
+	ULONG iMethodSize{ 0 };
     COM_FAIL_MSG_RETURN_ERROR(HRESULT, m_profilerInfo->GetILFunctionBody(moduleId, functionToken, (LPCBYTE*)&pMethodHeader, &iMethodSize),
 		_T("    ::InstrumentMethodWith(...) => GetILFunctionBody => 0x%X"));
 
 	Instrumentation::Method instumentedMethod(pMethodHeader);
-
-	//instumentedMethod.DumpIL();
-
+#if 0
+	instumentedMethod.DumpIL();
+#endif
 	instumentedMethod.InsertInstructionsAtOriginalOffset(0, instructions);
-
-	//instumentedMethod.DumpIL();
-
+#if 0
+	instumentedMethod.DumpIL();
+#endif
 	// now to write the method back
 	CComPtr<IMethodMalloc> methodMalloc;
 	COM_FAIL_MSG_RETURN_ERROR(HRESULT, m_profilerInfo->GetILFunctionBodyAllocator(moduleId, &methodMalloc),
@@ -498,8 +498,8 @@ HRESULT CCodeCoverage::InstrumentMethodWith(ModuleID moduleId, mdToken functionT
 
 int CCodeCoverage::getSendVisitPointsTimerInterval()
 {
-	int timerIntervalValue = 0;
-	TCHAR timerIntervalString[1024] = { 0 };
+	int timerIntervalValue{ 0 };
+	TCHAR timerIntervalString[1024]{ 0 };
 	if (::GetEnvironmentVariable(_T("OpenCover_SendVisitPointsTimerInterval"), &timerIntervalString[0], 1024) > 0) {
 		timerIntervalValue = gsl::narrow<int>(_tcstoul(&timerIntervalString[0], nullptr, 10));
 		ATLTRACE(_T("    ::Initialize(...) => sendVisitPointsTimerInterval = %d"), timerIntervalValue);

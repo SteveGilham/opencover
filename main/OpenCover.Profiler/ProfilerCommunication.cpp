@@ -81,7 +81,7 @@ namespace Communication
 
 	bool ProfilerCommunication::InitializeBufferSynchronization(std::basic_string<wchar_t>& resource_name)
 	{
-		ULONG bufferId = 0;
+		ULONG bufferId{ 0 };
 		if (AllocateBuffer(MAX_MSG_SIZE, bufferId))
 		{
 			std::wstring memoryKey;
@@ -516,8 +516,8 @@ namespace Communication
 		if (!_hostCommunicationActive)
 			return false;
 
-		bool response = false;
-		int repeat = 0;
+		bool response{ false };
+		int repeat{ 0 };
 		while (!response && (repeat <= 3)) {
 			++repeat;
 			_hostCommunicationActive = true;
@@ -562,7 +562,7 @@ namespace Communication
 		if (!_hostCommunicationActive)
 			return;
 
-		bool response = false;
+		bool response{ false };
 
 		RequestInformation(
 			[=]()
@@ -586,7 +586,7 @@ namespace Communication
 		if (!_hostCommunicationActive)
 			return false;
 
-		bool response = false;
+		bool response{ false };
 
 		RequestInformation(
 			[=]()

@@ -76,8 +76,8 @@ HRESULT CCodeCoverage::RegisterCuckoos(ModuleID moduleId){
 			COM_FAIL_MSG_RETURN_ERROR(HRESULT, metaDataImport->FindTypeDefByName(L"System.Security.SecurityCriticalScope", mdTokenNil, &scopeToken),
 				_T("    ::ModuleLoadFinished(...) => FindTypeDefByName => 0x%X"));
 
-			ULONG sigLength = 4;
-			COR_SIGNATURE ctorCallSignatureEnum[] =
+			ULONG sigLength{ 4 };
+			COR_SIGNATURE ctorCallSignatureEnum[]
 			{
 				IMAGE_CEE_CS_CALLCONV_DEFAULT | IMAGE_CEE_CS_CALLCONV_HASTHIS,
 				0x01,

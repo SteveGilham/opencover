@@ -13,8 +13,8 @@ CSharedMemory::~CSharedMemory() {
 
 void CSharedMemory::CloseMapping() {
     if (m_hMemory != nullptr) {
-        for (auto it = m_viewMap.begin(); it != m_viewMap.end(); ++it) {
-            ::UnmapViewOfFile((*it).first);
+        for (auto it : m_viewMap) {
+            ::UnmapViewOfFile(it.first);
         }
         m_viewMap.clear();
         CloseHandle(m_hMemory);
@@ -46,8 +46,8 @@ void* CSharedMemory::MapViewOfFile(DWORD dwFileOffsetHigh, DWORD dwFileOffsetLow
 }
 
 void CSharedMemory::FlushViewOfFile() {
-    for (auto it = m_viewMap.begin(); it != m_viewMap.end(); ++it) {
-        ::FlushViewOfFile((*it).first, (*it).second);
+    for (auto it : m_viewMap) {
+        ::FlushViewOfFile(it.first, it.second);
     }
 }
 

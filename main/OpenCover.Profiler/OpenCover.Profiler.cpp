@@ -69,8 +69,8 @@ STDAPI DllUnregisterServer(void)
 // DllInstall - Adds/Removes entries to the system registry per user per machine.
 STDAPI DllInstall(BOOL bInstall, _In_opt_ LPCWSTR pszCmdLine)
 {
-	HRESULT hr = E_FAIL;
-	static const wchar_t szUserSwitch[] = L"user";
+	HRESULT hr{ E_FAIL };
+	static const wchar_t szUserSwitch[]{ L"user" };
 	if (pszCmdLine != NULL)
 	{
 		if (_wcsnicmp(pszCmdLine, &szUserSwitch[0], _countof(szUserSwitch)) == 0)
