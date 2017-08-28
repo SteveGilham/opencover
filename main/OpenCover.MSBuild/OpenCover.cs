@@ -3,6 +3,7 @@
 //
 using System.Globalization;
 using System.IO;
+using System.Linq;
 using System.Reflection;
 using Microsoft.Build.Framework;
 using Microsoft.Build.Utilities;
@@ -109,21 +110,31 @@ namespace OpenCover.MSBuild
             builder.AppendSwitchIfNotNull("-targetdir:", TargetWorkingDir);
             builder.AppendSwitchIfNotNull("-targetargs:", TargetArgs);
 
-            if ((Filter!=null) && (Filter.Length>0))
+            if (Any(Filter))
                 builder.AppendSwitchIfNotNull("-filter:", string.Join<ITaskItem>(" ", Filter));
 
-            if ((ExcludeByAttribute!=null) && (ExcludeByAttribute.Length>0))
+            if (Any(ExcludeByAttribute))
                 builder.AppendSwitchIfNotNull("-excludebyattribute:", string.Join<ITaskItem>(";", ExcludeByAttribute));
 
-            if ((ExcludeByFile!=null) && (ExcludeByFile.Length>0))
+            if (Any(ExcludeByFile))
                 builder.AppendSwitchIfNotNull("-excludebyfile:", string.Join<ITaskItem>(";", ExcludeByFile));
 
-            if ((CoverByTest!=null) && (CoverByTest.Length>0))
+            if (Any(CoverByTest))
                 builder.AppendSwitchIfNotNull("-coverbytest:", string.Join<ITaskItem>(";", CoverByTest));
 
             builder.AppendSwitchIfNotNull("-output:", Output);
 
             return builder.ToString();
+        }
+
+        /// <summary>
+        /// Checks if a ITaskItem array has value
+        /// </summary>
+        /// <param name="argument">The argument to test</param>
+        /// <returns>True if present</returns>
+        private static bool Any(ITaskItem[] argument)
+        {
+            return argument != null && argument.Any();
         }
 
         /// <summary>

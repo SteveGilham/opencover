@@ -17,7 +17,7 @@
 __control_entrypoint(DllExport)
 STDAPI DllCanUnloadNow(void)
 {
-	#ifdef _MERGE_PROXYSTUB
+#ifdef _MERGE_PROXYSTUB
 	HRESULT hr = PrxDllCanUnloadNow();
 	if (hr != S_OK)
 		return hr;
@@ -29,7 +29,7 @@ STDAPI DllCanUnloadNow(void)
 _Check_return_
 STDAPI DllGetClassObject(_In_ REFCLSID rclsid, _In_ REFIID riid, _Outptr_ LPVOID* ppv)
 {
-	#ifdef _MERGE_PROXYSTUB
+#ifdef _MERGE_PROXYSTUB
 	if (PrxDllGetClassObject(rclsid, riid, ppv) == S_OK)
 		return S_OK;
 #endif
@@ -42,7 +42,7 @@ STDAPI DllRegisterServer(void)
 {
 	// registers object, typelib and all interfaces in typelib
 	HRESULT hr = _AtlModule.DllRegisterServer();
-	#ifdef _MERGE_PROXYSTUB
+#ifdef _MERGE_PROXYSTUB
 	if (FAILED(hr))
 		return hr;
 	hr = PrxDllRegisterServer();
@@ -55,7 +55,7 @@ __control_entrypoint(DllExport)
 STDAPI DllUnregisterServer(void)
 {
 	HRESULT hr = _AtlModule.DllUnregisterServer();
-	#ifdef _MERGE_PROXYSTUB
+#ifdef _MERGE_PROXYSTUB
 	if (FAILED(hr))
 		return hr;
 	hr = PrxDllRegisterServer();

@@ -55,8 +55,11 @@ namespace OpenCover.Console.CrashReporter
 
         private static int GetAnonymousMachineId()
         {
-            var mac = GetMacAddress();
-            return mac != null ? BitConverter.ToInt32(System.Security.Cryptography.MD5.Create().ComputeHash(mac.GetAddressBytes()), 0) : 0;
+            using (var hash = System.Security.Cryptography.MD5.Create())
+            {
+                var mac = GetMacAddress();
+                return mac != null ? BitConverter.ToInt32(hash.ComputeHash(mac.GetAddressBytes()), 0) : 0;
+            }
         }
 
         internal DetailedExceptionDescription GetDetailedExceptionDescription()

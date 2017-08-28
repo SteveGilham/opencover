@@ -8,7 +8,7 @@ using NUnit.Framework;
 
 namespace OpenCover.Specs.Steps
 {
-    internal class Utils
+    internal static class Utils
     {
         public static string GetTotalCoverage(string openCoverXml)
         {

@@ -10,7 +10,6 @@
 namespace Instrumentation
 {
 	class ExceptionHandler;
-	class Method;
 
 	typedef std::vector<ExceptionHandler *> ExceptionHandlerList;
 

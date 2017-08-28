@@ -148,6 +148,7 @@ namespace OpenCover.Framework.Manager
             public void Dispose()
             {
                 Dispose(true);
+                GC.SuppressFinalize(this);
             }
 
             private bool _disposed;
@@ -268,6 +269,7 @@ namespace OpenCover.Framework.Manager
             public void Dispose()
             {
                 Dispose(true);
+                GC.SuppressFinalize(this);
             }
 
             private bool _disposed;
@@ -444,6 +446,7 @@ namespace OpenCover.Framework.Manager
         public void Dispose()
         {
             Dispose(true);
+            GC.SuppressFinalize(this);
         }
 
         private bool _disposed;

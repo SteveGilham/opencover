@@ -187,6 +187,8 @@ private:
 
     bool OpenCoverSupportRequired(AssemblyID assemblyId, FunctionID functionId);
 
+	mdMethodDef CCodeCoverage::GetHelperMethodRef(const wchar_t * helperSource, TCHAR* methodName, ModuleID moduleId);
+
     mdMethodDef GetFakesHelperMethodRef(TCHAR* methodName, ModuleID moduleId);
     void InstrumentTestPlatformUtilities(FunctionID functionId, mdToken functionToken, ModuleID moduleId, AssemblyID assemblyId);
     void InstrumentTestPlatformTestExecutor(FunctionID functionId, mdToken functionToken, ModuleID moduleId, AssemblyID assemblyId);

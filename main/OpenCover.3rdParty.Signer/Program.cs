@@ -4,7 +4,7 @@ using System.Reflection;
 
 namespace OpenCover.ThirdParty.Signer
 {
-    class Program
+    static class Program
     {
 
         static void Main(string[] args)

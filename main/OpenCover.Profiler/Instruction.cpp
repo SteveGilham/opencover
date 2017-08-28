@@ -8,43 +8,37 @@
 
 namespace Instrumentation
 {
-	Instruction::Instruction()
+	Instruction::Instruction() :
+		m_offset(-1), m_operation(CEE_NOP), m_operand(0),
+		m_isBranch(false), m_origOffset(-1)
 	{
-		m_operation = CEE_NOP;
-		m_operand = 0;
-		m_offset = -1;
-		m_isBranch = false;
-		m_origOffset = -1;
 	}
 
-	Instruction::Instruction(CanonicalName operation, ULONGLONG operand)
+	Instruction::Instruction(CanonicalName operation, ULONGLONG operand) : 
+		m_offset(-1), m_operation(operation), m_operand(operand),
+		m_isBranch(false), m_origOffset(-1)
 	{
-		m_operation = operation;
-		m_operand = operand;
-		m_offset = -1;
-		m_isBranch = false;
-		m_origOffset = -1;
 	}
 
-	Instruction::Instruction(CanonicalName operation)
+	Instruction::Instruction(CanonicalName operation) :
+		m_offset(-1), m_operation(operation), m_operand(0),
+		m_isBranch(false), m_origOffset(-1)
 	{
-		m_operation = operation;
-		m_operand = 0;
-		m_offset = -1;
-		m_isBranch = false;
-		m_origOffset = -1;
 	}
 
 	Instruction& Instruction::operator = (const Instruction& b)
 	{
-		m_offset = b.m_offset;
-		m_operation = b.m_operation;
-		m_operand = b.m_operand;
-		m_isBranch = b.m_isBranch;
-		m_branchOffsets = b.m_branchOffsets;
-		m_branches = b.m_branches;
-		m_joins = b.m_joins;
-		m_origOffset = b.m_origOffset;
+		if (&b != this)
+		{
+			m_offset = b.m_offset;
+			m_operation = b.m_operation;
+			m_operand = b.m_operand;
+			m_isBranch = b.m_isBranch;
+			m_branchOffsets = b.m_branchOffsets;
+			m_branches = b.m_branches;
+			m_joins = b.m_joins;
+			m_origOffset = b.m_origOffset;
+		}
 		return *this;
 	}
 

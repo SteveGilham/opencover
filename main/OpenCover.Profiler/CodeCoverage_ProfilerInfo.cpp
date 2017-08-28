@@ -172,7 +172,9 @@ std::wstring CCodeCoverage::GetTypeAndMethodName(FunctionID functionId)
 	methodName += L"::";
 	methodName += &szMethodName[0];
 
-	//ATLTRACE(_T("::GetTypeAndMethodName(%s)"), W2CT(methodName.c_str()));
+#if 0
+	ATLTRACE(_T("::GetTypeAndMethodName(%s)"), W2CT(methodName.c_str()));
+#endif
 
 	return methodName;
 }

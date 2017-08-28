@@ -16,7 +16,7 @@ namespace OpenCover.Framework.Model
     /// </summary>
     public class CoverageSession
     {
-        private string _version;
+        private readonly string _version;
 
         /// <summary>
         /// initialise a coverage session

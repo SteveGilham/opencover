@@ -187,58 +187,60 @@ namespace OpenCover.Console
         {
             var processName = "svchost.exe";
             string wmiQuery = string.Format("select CommandLine, ProcessId from Win32_Process where Name='{0}'", processName);
-            var searcher = new ManagementObjectSearcher(wmiQuery);
-            ManagementObjectCollection retObjectCollection = searcher.Get();
-            foreach (var retObject in retObjectCollection)
+            using (var searcher = new ManagementObjectSearcher(wmiQuery))
             {
-                var cmdLine = (string)retObject["CommandLine"];
-                if (cmdLine.EndsWith("-k iissvcs"))
-                {
-                    var proc = (int)retObject["ProcessId"];
-
-                    // Terminate, the restart is done automatically
-                    Logger.InfoFormat("Stopping svchost with pid '{0}'", proc);
-                    try
-                    {
-                        Process.GetProcessById(proc).Kill();
-                        Logger.InfoFormat("svchost with pid '{0}' was stopped succcesfully", proc);
-                    }
-                    catch (Exception e)
-                    {
-                        Logger.InfoFormat("Unable to stop svchost with pid '{0}' IIS profiling may not work: {1}", proc, e.Message);
-                    }
-                }
-            }
-
-            // Wait three seconds for the svchost to start
-            // TODO, make this configurable
-            var secondstowait = 3;
-
-            // Wait for successfull restart of the svchost
-            Stopwatch s = new Stopwatch();
-            s.Start();
-            bool found = false;
-            while (s.Elapsed < TimeSpan.FromSeconds(secondstowait))
-            {
-                retObjectCollection = searcher.Get();
+                ManagementObjectCollection retObjectCollection = searcher.Get();
                 foreach (var retObject in retObjectCollection)
                 {
-                    var cmdLine = (string)retObject["CommandLine"] ?? string.Empty;
+                    var cmdLine = (string)retObject["CommandLine"];
                     if (cmdLine.EndsWith("-k iissvcs"))
                     {
-                        var proc = (uint)retObject["ProcessId"];
-                        Logger.InfoFormat("New svchost for w3svc with pid '{0}' was started", proc);
-                        found = true;
-                        break;
+                        var proc = (int)retObject["ProcessId"];
+
+                        // Terminate, the restart is done automatically
+                        Logger.InfoFormat("Stopping svchost with pid '{0}'", proc);
+                        try
+                        {
+                            Process.GetProcessById(proc).Kill();
+                            Logger.InfoFormat("svchost with pid '{0}' was stopped succcesfully", proc);
+                        }
+                        catch (Exception e)
+                        {
+                            Logger.InfoFormat("Unable to stop svchost with pid '{0}' IIS profiling may not work: {1}", proc, e.Message);
+                        }
                     }
                 }
-                if (found)
-                    break;
-            }
-            s.Stop();
 
-            // Return the found state
-            return found;
+                // Wait three seconds for the svchost to start
+                // TODO, make this configurable
+                var secondstowait = 3;
+
+                // Wait for successfull restart of the svchost
+                Stopwatch s = new Stopwatch();
+                s.Start();
+                bool found = false;
+                while (s.Elapsed < TimeSpan.FromSeconds(secondstowait))
+                {
+                    retObjectCollection = searcher.Get();
+                    foreach (var retObject in retObjectCollection)
+                    {
+                        var cmdLine = (string)retObject["CommandLine"] ?? string.Empty;
+                        if (cmdLine.EndsWith("-k iissvcs"))
+                        {
+                            var proc = (uint)retObject["ProcessId"];
+                            Logger.InfoFormat("New svchost for w3svc with pid '{0}' was started", proc);
+                            found = true;
+                            break;
+                        }
+                    }
+                    if (found)
+                        break;
+                }
+                s.Stop();
+
+                // Return the found state
+                return found;
+            }
         }
         
 

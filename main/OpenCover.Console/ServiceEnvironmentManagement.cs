@@ -131,7 +131,7 @@ namespace OpenCover.Console
                 bool bInherit);
 
 
-        private void SetEnvironmentVariables(string serviceName, string[] environment)
+        private static void SetEnvironmentVariables(string serviceName, string[] environment)
         {
             Microsoft.Win32.RegistryKey key = GetServiceKey(serviceName);
             if (key != null)
@@ -143,7 +143,7 @@ namespace OpenCover.Console
             return a.Concat(b).ToArray();
         }
 
-        private string[] GetServicesEnvironment()
+        private static string[] GetServicesEnvironment()
         {
             Process[] servicesProcesses = Process.GetProcessesByName("services");
             if (servicesProcesses == null || servicesProcesses.Length != 1)
@@ -166,8 +166,7 @@ namespace OpenCover.Console
             IntPtr tokenHandle = IntPtr.Zero;
             if (!OpenProcessToken(processHandle, 0x20008, ref tokenHandle))
                 return new string[0];
-            IntPtr environmentPtr;
-            if (!CreateEnvironmentBlock(out environmentPtr, tokenHandle, false))
+            if (!CreateEnvironmentBlock(out IntPtr environmentPtr, tokenHandle, false))
                 return new string[0];
             unsafe
             {
@@ -223,22 +222,20 @@ namespace OpenCover.Console
             return null;
         }
 
-        private string LookupAccountSid(string accountName)
+        private static string LookupAccountSid(string accountName)
         {
             int sidLen = 0;
             byte[] sid = new byte[sidLen];
             int domainNameLen = 0;
-            int peUse;
             StringBuilder domainName = new StringBuilder();
-            LookupAccountName(Environment.MachineName, accountName, sid, ref sidLen, domainName, ref domainNameLen, out peUse);
+            LookupAccountName(Environment.MachineName, accountName, sid, ref sidLen, domainName, ref domainNameLen, out int peUse);
 
             sid = new byte[sidLen];
             domainName = new StringBuilder(domainNameLen);
             string stringSid = null;
             if (LookupAccountName(Environment.MachineName, accountName, sid, ref sidLen, domainName, ref domainNameLen, out peUse))
             {
-                IntPtr stringSidPtr;
-                if (ConvertSidToStringSidW(sid, out stringSidPtr))
+                if (ConvertSidToStringSidW(sid, out IntPtr stringSidPtr))
                 {
                     try
                     {
@@ -266,27 +263,27 @@ namespace OpenCover.Console
             }
         }
 
-        private Microsoft.Win32.RegistryKey GetAccountEnvironmentKey(string serviceAccountSid)
+        private static Microsoft.Win32.RegistryKey GetAccountEnvironmentKey(string serviceAccountSid)
         {
             Microsoft.Win32.RegistryKey users = Microsoft.Win32.Registry.Users;
             return users.OpenSubKey(serviceAccountSid + @"\Environment", true);
         }
 
-        private string EnvValue(string envVariable)
+        private static string EnvValue(string envVariable)
         {
             int index = envVariable.IndexOf('=');
             Debug.Assert(index >= 0);
             return envVariable.Substring(index + 1);
         }
 
-        private string EnvKey(string envVariable)
+        private static string EnvKey(string envVariable)
         {
             int index = envVariable.IndexOf('=');
             Debug.Assert(index >= 0);
             return envVariable.Substring(0, index);
         }
 
-        private void DeleteEnvironmentVariables(string serviceName)
+        private static void DeleteEnvironmentVariables(string serviceName)
         {
             Microsoft.Win32.RegistryKey key = GetServiceKey(serviceName);
             if (key != null)

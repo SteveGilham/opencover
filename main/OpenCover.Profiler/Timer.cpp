@@ -57,7 +57,7 @@ namespace Communication
 			_isRunningCondition.wait_for(
 				lock,
 				std::chrono::milliseconds(timerIntervalMsec),
-				[&]() {return !_isRunning; });
+				[this]() {return !_isRunning; });
 
 			if (_isRunning)
 			{

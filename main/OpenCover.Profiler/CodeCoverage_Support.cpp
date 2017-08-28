@@ -302,7 +302,11 @@ bool CCodeCoverage::OpenCoverSupportRequired(AssemblyID assemblyId, FunctionID f
     return true;
 }
 
-mdMethodDef CCodeCoverage::GetFakesHelperMethodRef(TCHAR* methodName, ModuleID moduleId){
+mdMethodDef CCodeCoverage::GetFakesHelperMethodRef(TCHAR* methodName, ModuleID moduleId) {
+	return GetHelperMethodRef(L"OpenCover.Support.Fakes.FakesHelper", methodName, moduleId);
+}
+
+mdMethodDef CCodeCoverage::GetHelperMethodRef(const wchar_t * helperSource, TCHAR* methodName, ModuleID moduleId){
     // get reference to injected
     mdModuleRef injectedRef;
     HRESULT hr = GetOpenCoverSupportRef(moduleId, injectedRef);
@@ -326,7 +330,7 @@ mdMethodDef CCodeCoverage::GetFakesHelperMethodRef(TCHAR* methodName, ModuleID m
     // get method to call
     mdTypeRef classTypeRef;
     hr = metaDataEmit->DefineTypeRefByName(injectedRef,
-        L"OpenCover.Support.Fakes.FakesHelper", &classTypeRef);
+		helperSource, &classTypeRef);
     ATLASSERT(hr == S_OK);
 
     // L"LoadOpenCoverProfilerInstead"
@@ -340,39 +344,7 @@ mdMethodDef CCodeCoverage::GetFakesHelperMethodRef(TCHAR* methodName, ModuleID m
 }
 
 mdMethodDef CCodeCoverage::GetUITestingHelperMethodRef(TCHAR* methodName, ModuleID moduleId){
-    // get reference to injected
-    mdModuleRef injectedRef;
-    HRESULT hr = GetOpenCoverSupportRef(moduleId, injectedRef);
-    ATLASSERT(hr == S_OK);
-
-    // get interfaces
-    CComPtr<IMetaDataEmit> metaDataEmit;
-#pragma warning (suppress : 26490) // cast is simplest and safe
-	hr = m_profilerInfo->GetModuleMetaData(moduleId,
-        ofRead | ofWrite, IID_IMetaDataEmit, reinterpret_cast<IUnknown**>(&metaDataEmit));
-    ATLASSERT(hr == S_OK);
-
-    static COR_SIGNATURE methodCallSignature[] =
-    {
-        IMAGE_CEE_CS_CALLCONV_DEFAULT,
-        0x01,
-        ELEMENT_TYPE_VOID,
-        ELEMENT_TYPE_OBJECT
-    };
-
-    // get method to call
-    mdTypeRef classTypeRef;
-    hr = metaDataEmit->DefineTypeRefByName(injectedRef,
-        L"OpenCover.Support.UITesting.UITestingHelper", &classTypeRef);
-    ATLASSERT(hr == S_OK);
-
-    mdMemberRef memberRef;
-    hr = metaDataEmit->DefineMemberRef(classTypeRef,
-        T2W(methodName), &methodCallSignature[0],
-        sizeof(methodCallSignature), &memberRef);
-    ATLASSERT(hr == S_OK);
-
-    return memberRef;
+	return GetHelperMethodRef(L"OpenCover.Support.UITesting.UITestingHelper", methodName, moduleId);
 }
 
 void CCodeCoverage::InstrumentTestToolsUITesting(FunctionID functionId, mdToken functionToken, ModuleID moduleId, AssemblyID assemblyId)
