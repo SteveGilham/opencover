@@ -323,9 +323,8 @@ namespace Instrumentation
 	/// beforehand</remarks>
 	Instruction * Method::GetInstructionAtOffset(long offset)
 	{
-		const auto ptr = std::find_if(
-			m_instructions.begin(),
-			m_instructions.end(),
+		const auto ptr = ranges::v3::find_if(
+			m_instructions,
 			[=](auto i) -> bool { return i->m_offset == offset; }
 		);
 
@@ -354,9 +353,8 @@ namespace Instrumentation
 	/// </example>
 	Instruction * Method::GetInstructionAtOffset(long offset, bool isFinally, bool isFault, bool isFilter, bool isTyped)
 	{
-		const auto ptr = std::find_if(
-			m_instructions.begin(),
-			m_instructions.end(),
+		const auto ptr = ranges::v3::find_if(
+			m_instructions,
 			[=](auto i) -> bool { return i->m_offset == offset; }
 		);
 
@@ -482,7 +480,7 @@ namespace Instrumentation
 
 	void Method::DumpExceptionFilters()
 	{
-		int i = 0;
+		int i{ 0 };
 		for (auto it : m_exceptions)
 		{
 			const auto tryStartOffset = it->m_tryStart != nullptr ? it->m_tryStart->m_offset : 0;
@@ -573,7 +571,7 @@ namespace Instrumentation
 	/// size, the operand size and any extra datablocks CEE_SWITCH</summary>
 	void Method::RecalculateOffsets()
 	{
-		int position = 0;
+		int position{ 0 };
 		for (const auto it : m_instructions)
 		{
 			const auto& details = Operations::m_mapNameOperationDetails[it->m_operation];
@@ -640,22 +638,18 @@ namespace Instrumentation
 	/// <param name="instructions">The list of instructions to compare with at that location.</param>
 	bool Method::IsInstrumented(long offset, const InstructionList &instructions)
 	{
-		auto it = std::find_if(
-			m_instructions.begin(),
-			m_instructions.end(),
+		auto it = ranges::v3::find_if(
+			m_instructions,
 			[=](auto i) -> bool { return i->m_origOffset == offset; }
 		);
 
 		if (it != m_instructions.end())
 		{
-			for (auto it2 : instructions)
-			{
-				if (!it2->Equivalent(*(*it)))
-					return false;
-				++it;
-			}
-
-			return true;
+			// match up the rest of the instructions with the supplied list
+			return ranges::v3::all_of(ranges::v3::view::zip(
+					ranges::v3::make_range(it, m_instructions.end()),
+					instructions),
+				[](auto item) -> bool {	return item.first->Equivalent(*(item.second));	});
 		}
 
 		return false;
@@ -671,9 +665,8 @@ namespace Instrumentation
 	{
 		auto clone = instructions | ranges::v3::view::transform([](auto item) -> Instruction* { return std::make_unique<Instruction>(*item).release();});
 
-		auto it = std::find_if(
-			m_instructions.begin(),
-			m_instructions.end(),
+		auto it = ranges::v3::find_if(
+			m_instructions,
 			[=](auto i) -> bool { return i->m_offset == offset; }
 		);
 
@@ -683,9 +676,8 @@ namespace Instrumentation
 			m_instructions.insert(it, clone.begin(), clone.end());
 		}
 
-		auto it2 = std::find_if(
-			m_instructions.begin(),
-			m_instructions.end(),
+		auto it2 = ranges::v3::find_if(
+			m_instructions,
 			[=](auto i) -> bool { return i->m_origOffset == offset; }
 		);
 
@@ -717,9 +709,8 @@ namespace Instrumentation
 
 		long actualOffset{ 0 };
 		Instruction* actualInstruction{ nullptr };
-		auto actualInstructionptr = std::find_if(
-			m_instructions.begin(),
-			m_instructions.end(),
+		auto actualInstructionptr = ranges::v3::find_if(
+			m_instructions,
 			[=](auto i) -> bool {return i->m_origOffset == origOffset;}
 		);
 
@@ -733,16 +724,15 @@ namespace Instrumentation
 
 		if (!DoesTryHandlerPointToOffset(actualOffset))
 		{
-			auto ptr = std::find_if(
-				m_instructions.begin(),
-				m_instructions.end(),
+			auto ptr = ranges::v3::find_if(
+				m_instructions,
 				[=](auto i) -> bool {return i == actualInstruction;}
 			);
 
 			if (ptr != m_instructions.end())
 			{
 				// move instruction to after the clone block
-				Instruction orig = *(*ptr);
+				auto orig = *(*ptr);
 				for (unsigned int i = 0; i < instructions.size(); i++)
 				{
 					const auto temp = ptr;
@@ -762,9 +752,8 @@ namespace Instrumentation
 	/// <returns>An <c>Instruction</c> that exists at that location.</returns>
 	bool Method::DoesTryHandlerPointToOffset(long offset)
 	{
-		return std::any_of(
-			m_exceptions.begin(),
-			m_exceptions.end(),
+		return ranges::v3::any_of(
+			m_exceptions,
 			[=](auto i) -> bool { return (i->m_handlerType == COR_ILEXCEPTION_CLAUSE_NONE
 				                      && i->m_handlerStart->m_offset == offset
 					                  && i->m_handlerStart->m_operand == CEE_THROW);}
@@ -778,9 +767,8 @@ namespace Instrumentation
 	/// debugger where the new debug points are.</remarks>
 	ULONG Method::GetILMapSize()
 	{
-		return gsl::narrow<ULONG>(std::count_if(
-			m_instructions.begin(),
-			m_instructions.end(),
+		return gsl::narrow<ULONG>(ranges::v3::count_if(
+			m_instructions,
 			[](auto i) -> bool { return i->m_origOffset != -1; }
 		));
 	}
@@ -797,11 +785,11 @@ namespace Instrumentation
 
 		auto originalInstructions = m_instructions | ranges::v3::view::filter([](auto item) -> bool {return item->m_origOffset != -1;});
 		auto mapping = ranges::v3::view::counted(maps, gsl::narrow<ptrdiff_t>(mapSize));
-		for (auto item : ranges::v3::view::zip(originalInstructions, mapping))
+		ranges::v3::for_each(ranges::v3::view::zip(originalInstructions, mapping), [](auto item)
 		{
 			item.second.fAccurate = TRUE;
 			item.second.oldOffset = static_cast<ULONG32>(item.first->m_origOffset);
 			item.second.newOffset = static_cast<ULONG32>(item.first->m_offset);
-		}
+		});
 	}
 }

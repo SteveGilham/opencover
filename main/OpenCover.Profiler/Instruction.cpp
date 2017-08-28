@@ -50,13 +50,8 @@ namespace Instrumentation
 			return false;
 		if (m_branches.size() != b.m_branches.size()) 
 			return false;
-		auto it2 = b.m_branches.begin();
-		for (const auto it : m_branches)
-		{
-			if (!it->Equivalent(*(*it2)))
-				return false;
-			++it2;
-		}
-		return true;
+		return ranges::v3::all_of(ranges::v3::view::zip(m_branches, b.m_branches),
+			[](auto item) -> bool {	return item.first->Equivalent(*(item.second));
+		});
 	}
 }
