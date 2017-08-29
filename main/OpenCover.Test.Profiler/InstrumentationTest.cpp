@@ -576,6 +576,84 @@ TEST_F(InstrumentationTest, CanInsertInstructions_Whilst_Maintaining_Pointer)
     ASSERT_EQ(CEE_NOP, instrument.m_instructions[1]->m_branches[0]->m_operation);
 }
 
+
+/*
+From #663
+
+public static decimal GetAnswer()
+{
+try
+{
+return 42;
+}
+catch (Exception ex)
+{
+throw ex;
+}
+}
+
+
+compiles in release build to (by ILDASM)
+
+.method public hidebysig static valuetype [mscorlib]System.Decimal
+GetAnswer() cil managed
+// SIG: 00 00 11 45
+{
+// Method begins at RVA 0x2050
+// Code size       13 (0xd)
+.maxstack  1
+.locals init ([0] valuetype [mscorlib]System.Decimal V_0)
+.try
+{
+IL_0000:  /* 1F   | 2A               // ldc.i4.s   42
+IL_0002:  /* 73   | (0A)00000F       // newobj     instance void[mscorlib]System.Decimal::.ctor(int32)
+	IL_0007 :  /* 0A   |                  // stloc.0
+	IL_0008 :  /* DE   | 01               // leave.s    IL_000b
+  }  // end .try
+  catch[mscorlib]System.Exception
+  {
+  IL_000a:  /* 7A   |                  // throw
+  }  // end handler
+	 // HEX: 00 00 00 00 0A 0A 00 01 12 00 00 01
+  IL_000b:  /* 06   |                  // ldloc.0
+	  IL_000c :  /* 2A   |                  // ret
+} // end of method Class1::GetAnswer
+*/
+
+TEST_F(InstrumentationTest, CanInsertInstructionAtExceptionHandler)
+{
+	BYTE data[] = {
+		0x00, 0x00, 0x00, 0x00,
+		0x00, 0x00, 0x00, 0x00,
+		0x00, 0x00, 0x00, 0x00,
+		0x1F, 0x2A,						// ldc.i4.s   42
+		0x73, 0x0A, 0x00, 0x00, 0x0F,   // newobj     instance void[mscorlib]System.Decimal::.ctor(int32)
+		0x0A,							// stloc.0
+		0xDE, 0x01,						// leave.s    IL_000b
+		0x7A,							// throw
+		0x06,							// ldloc.0
+		0x2A,							// ret
+
+		0x00, 0x00, 0x00,// align
+		0x01, 0x0C, 0x00, 0x00,
+
+		// HEX: 00 00 00 00 0A 0A 00 01 12 00 00 01
+		0x00, 0x00, 0x00, 0x00, 0x0A, 0x0A, 0x00, 0x01, 0x12, 0x00, 0x00, 0x01
+	};
+
+	auto pHeader = reinterpret_cast<IMAGE_COR_ILMETHOD_FAT*>(data);
+	pHeader->Flags = CorILMethod_FatFormat | CorILMethod_MoreSects;
+	pHeader->CodeSize = static_cast<DWORD>(13);
+	pHeader->Size = 3;
+
+	Method instrument(reinterpret_cast<IMAGE_COR_ILMETHOD*>(data));
+
+	InstructionList instructions;
+	instructions.push_back(new Instruction(CEE_NOP, 0));
+
+	instrument.InsertInstructionsAtOriginalOffset(10, instructions);
+}
+
 TEST_F(InstrumentationTest, InsertionAtOriginalOffsetBeyondTheEndIsNoOp)
 {
 	BYTE data[] = { (8 << 2) + CorILMethod_TinyFormat,
