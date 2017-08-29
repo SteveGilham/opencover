@@ -705,42 +705,31 @@ namespace Instrumentation
 	/// copy the data between them</remarks>
 	void Method::InsertInstructionsAtOriginalOffset(long origOffset, const InstructionList &instructions)
 	{
-		auto clone = instructions | ranges::v3::view::transform([](auto item) -> Instruction* { return std::make_unique<Instruction>(*item).release();});
-
-		long actualOffset{ 0 };
-		Instruction* actualInstruction{ nullptr };
 		auto actualInstructionptr = ranges::v3::find_if(
 			m_instructions,
 			[=](auto i) -> bool {return i->m_origOffset == origOffset;}
 		);
 
-		if (actualInstructionptr != m_instructions.end())
+		if (actualInstructionptr == m_instructions.end())
 		{
-			actualInstruction = *actualInstructionptr;
-			actualOffset = actualInstruction->m_offset;
-			++actualInstructionptr;
-			m_instructions.insert(actualInstructionptr, clone.begin(), clone.end());
+			return; // untested
 		}
 
-		if (!DoesTryHandlerPointToOffset(actualOffset))
-		{
-			auto ptr = ranges::v3::find_if(
-				m_instructions,
-				[=](auto i) -> bool {return i == actualInstruction;}
-			);
+		auto actualOffset = (*actualInstructionptr)->m_offset;
+		auto clone = instructions | ranges::v3::view::transform([](auto item) -> Instruction* { return std::make_unique<Instruction>(*item).release();});
 
-			if (ptr != m_instructions.end())
-			{
-				// move instruction to after the clone block
-				auto orig = *(*ptr);
-				for (unsigned int i = 0; i < instructions.size(); i++)
-				{
-					const auto temp = ptr;
-					++ptr;
-					*(*temp) = *(*ptr);
-				}
-				*(*ptr) = orig;
-			}
+		if (DoesTryHandlerPointToOffset(actualOffset))
+		{
+			++actualInstructionptr; // untested
+			m_instructions.insert(actualInstructionptr, clone.begin(), clone.end());
+		}
+		else
+		{
+			// move instruction content to after the clone block
+			InstructionList orig{ 1, std::make_unique<Instruction>(*(*actualInstructionptr)).release() };
+			*(*actualInstructionptr) = *instructions[0]; // branches go the the pointer here
+			auto concat = ranges::v3::view::concat(clone, orig);
+			m_instructions.insert(actualInstructionptr + 1, concat.begin() + 1, concat.end());
 		}
 
 		RecalculateOffsets();
