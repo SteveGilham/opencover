@@ -576,6 +576,44 @@ TEST_F(InstrumentationTest, CanInsertInstructions_Whilst_Maintaining_Pointer)
     ASSERT_EQ(CEE_NOP, instrument.m_instructions[1]->m_branches[0]->m_operation);
 }
 
+TEST_F(InstrumentationTest, InsertionAtOriginalOffsetBeyondTheEndIsNoOp)
+{
+	BYTE data[] = { (8 << 2) + CorILMethod_TinyFormat,
+		CEE_BR_S, 0x05,
+		CEE_BR, 0x00, 0x00, 0x00, 0x00,
+		CEE_RET };
+
+	Method instrument(reinterpret_cast<IMAGE_COR_ILMETHOD*>(data));
+
+	InstructionList instructions;
+	instructions.push_back(new Instruction(CEE_NOP, 0));
+
+	instrument.InsertInstructionsAtOriginalOffset(42, instructions);
+
+	ASSERT_EQ(3, instrument.GetNumberOfInstructions());
+
+	ASSERT_EQ(CEE_RET, instrument.m_instructions[2]->m_operation);
+}
+
+TEST_F(InstrumentationTest, InsertionAtOffsetBeyondTheEndIsNoOp)
+{
+	BYTE data[] = { (8 << 2) + CorILMethod_TinyFormat,
+		CEE_BR_S, 0x05,
+		CEE_BR, 0x00, 0x00, 0x00, 0x00,
+		CEE_RET };
+
+	Method instrument(reinterpret_cast<IMAGE_COR_ILMETHOD*>(data));
+
+	InstructionList instructions;
+	instructions.push_back(new Instruction(CEE_NOP, 0));
+
+	instrument.InsertInstructionsAtOffset(42, instructions);
+
+	ASSERT_EQ(3, instrument.GetNumberOfInstructions());
+
+	ASSERT_EQ(CEE_RET, instrument.m_instructions[2]->m_operation);
+}
+
 TEST_F(InstrumentationTest, CanWriteMethod)
 {
     BYTE data[] = {(8 << 2) + CorILMethod_TinyFormat, 

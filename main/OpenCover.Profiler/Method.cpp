@@ -655,6 +655,38 @@ namespace Instrumentation
 		return false;
 	}
 
+	/// <summary>Create a lazy clone of an instruction list</summary>
+	/// <param name="source">The list of instructions to clone.</param>
+	/// <returns>The clone of the list.</returns>
+	/// <remarks>This method provides on-demand copies of the list items,
+	/// with ownership that is local.  Also, the only way we can write this is 
+	/// with an "auto" return as the type is unutterable.</remarks>
+	static auto CloneInstructions(const InstructionList & source)
+	{
+		return (source | ranges::v3::view::transform([](auto item) -> Instruction* {
+			return std::make_unique<Instruction>(*item).release();}));
+	}
+
+	/// <summary>Insert a sequence of instructions at a specific location</summary>
+	/// <param name="target">The list to insert into.</param>
+	/// <param name="source">The list of instructions to insert at that location.</param>
+	/// <param name="it">The iterator into target of interest.</param>
+	/// <remarks>Original pointer references are maintained by inserting the sequence of instructions 
+	/// after the intended target and then using a copy operator on the <c>Instruction</c> objects to 
+	/// copy the data between them</remarks>
+	void Method::InsertAndShuffle(
+		InstructionList & target,
+		const InstructionList & source,
+		const ranges::v3::range_safe_iterator_t<InstructionList&> & it)
+	{
+		InstructionList orig{ 1, std::make_unique<Instruction>(*(*it)).release() };
+		auto clone = source | ranges::v3::view::transform([](auto item) -> Instruction* {
+			return std::make_unique<Instruction>(*item).release();});
+		*(*it) = *source[0]; // branches go the the pointer here
+		auto concat = ranges::v3::view::concat(CloneInstructions(source), orig);
+		target.insert(it + 1, concat.begin() + 1, concat.end());
+	}
+
 	/// <summary>Insert a sequence of instructions at a specific offset</summary>
 	/// <param name="offset">The offset to look for.</param>
 	/// <param name="instructions">The list of instructions to insert at that location.</param>
@@ -663,9 +695,7 @@ namespace Instrumentation
 	/// copy the data between them</remarks>
 	void Method::InsertInstructionsAtOffset(long offset, const InstructionList &instructions)
 	{
-		auto clone = instructions | ranges::v3::view::transform([](auto item) -> Instruction* { return std::make_unique<Instruction>(*item).release();});
-
-		auto it = ranges::v3::find_if(
+		const auto it = ranges::v3::find_if(
 			m_instructions,
 			[=](auto i) -> bool { return i->m_offset == offset; }
 		);
@@ -685,11 +715,7 @@ namespace Instrumentation
 		_ASSERTE((*it)->m_offset == (*it)->m_origOffset);
 
 		// move instruction content to after the clone block
-		InstructionList orig{ 1, std::make_unique<Instruction>(*(*it)).release() };
-		*(*it) = *instructions[0]; // branches go the the pointer here
-		auto concat = ranges::v3::view::concat(clone, orig);
-		m_instructions.insert(it + 1, concat.begin() + 1, concat.end());
-
+		InsertAndShuffle(m_instructions, instructions, it);
 		RecalculateOffsets();
 	}
 
@@ -701,31 +727,26 @@ namespace Instrumentation
 	/// copy the data between them</remarks>
 	void Method::InsertInstructionsAtOriginalOffset(long origOffset, const InstructionList &instructions)
 	{
-		auto actualInstructionptr = ranges::v3::find_if(
+		const auto it = ranges::v3::find_if(
 			m_instructions,
 			[=](auto i) -> bool {return i->m_origOffset == origOffset;}
 		);
 
-		if (actualInstructionptr == m_instructions.end())
+		if (it == m_instructions.end())
 		{
-			return; // untested
+			return;
 		}
 
-		auto actualOffset = (*actualInstructionptr)->m_offset;
-		auto clone = instructions | ranges::v3::view::transform([](auto item) -> Instruction* { return std::make_unique<Instruction>(*item).release();});
+		auto actualOffset = (*it)->m_offset;
 
 		if (DoesTryHandlerPointToOffset(actualOffset))
 		{
-			++actualInstructionptr; // untested
-			m_instructions.insert(actualInstructionptr, clone.begin(), clone.end());
+			ranges::v3::action::insert(m_instructions, // untested branch
+				it + 1, CloneInstructions(instructions));
 		}
 		else
 		{
-			// move instruction content to after the clone block
-			InstructionList orig{ 1, std::make_unique<Instruction>(*(*actualInstructionptr)).release() };
-			*(*actualInstructionptr) = *instructions[0]; // branches go the the pointer here
-			auto concat = ranges::v3::view::concat(clone, orig);
-			m_instructions.insert(actualInstructionptr + 1, concat.begin() + 1, concat.end());
+			InsertAndShuffle(m_instructions, instructions, it);
 		}
 
 		RecalculateOffsets();

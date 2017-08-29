@@ -68,6 +68,10 @@ namespace Instrumentation
 
 		void WriteSections();
 		bool DoesTryHandlerPointToOffset(long offset);
+		void Method::InsertAndShuffle(
+			InstructionList & target,
+			const InstructionList & source,
+			const ranges::v3::range_safe_iterator_t<InstructionList&> & it);
 
 	private:
 		// all instrumented methods will be FAT (with FAT SECTIONS if exist) regardless
