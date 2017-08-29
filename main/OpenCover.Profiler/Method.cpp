@@ -670,29 +670,25 @@ namespace Instrumentation
 			[=](auto i) -> bool { return i->m_offset == offset; }
 		);
 
-		if (it != m_instructions.end())
+		if (it == m_instructions.end())
 		{
-			++it;
-			m_instructions.insert(it, clone.begin(), clone.end());
+			return;
 		}
 
-		auto it2 = ranges::v3::find_if(
-			m_instructions,
-			[=](auto i) -> bool { return i->m_origOffset == offset; }
-		);
+		// This used to find by offset to insert, then again by original 
+		// offset to shuffle.
+		// These should be different locations in general, but then the 
+		// shuffle along of instructions makes no sense unless they are 
+		// the same; and in practice, a throw on offset and original 
+		// offset differing isn't taken in a dogfood run.
+		// So maintain that but turn an explicit throw into an assert
+		_ASSERTE((*it)->m_offset == (*it)->m_origOffset);
 
-		if (it2 != m_instructions.end())
-		{
-			// move instruction to after the clone block
-			auto orig = *(*it2);
-			for (unsigned int i = 0; i < instructions.size(); i++)
-			{
-				const auto temp = it2;
-				++it2;
-				*(*temp) = *(*it2);
-			}
-			*(*it2) = orig;
-		}
+		// move instruction content to after the clone block
+		InstructionList orig{ 1, std::make_unique<Instruction>(*(*it)).release() };
+		*(*it) = *instructions[0]; // branches go the the pointer here
+		auto concat = ranges::v3::view::concat(clone, orig);
+		m_instructions.insert(it + 1, concat.begin() + 1, concat.end());
 
 		RecalculateOffsets();
 	}
