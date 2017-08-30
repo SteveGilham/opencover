@@ -737,33 +737,9 @@ namespace Instrumentation
 			return;
 		}
 
-		auto actualOffset = (*it)->m_offset;
-
-		if (DoesTryHandlerPointToOffset(actualOffset))
-		{
-			ranges::v3::action::insert(m_instructions, // untested branch
-				it + 1, CloneInstructions(instructions));
-		}
-		else
-		{
-			InsertAndShuffle(m_instructions, instructions, it);
-		}
+		InsertAndShuffle(m_instructions, instructions, it);
 
 		RecalculateOffsets();
-	}
-
-	/// <summary>Test if we have an exception where the handler start points to the 
-	/// instruction at the supplied offset</summary>
-	/// <param name="offset">The offset to look for.</param>
-	/// <returns>An <c>Instruction</c> that exists at that location.</returns>
-	bool Method::DoesTryHandlerPointToOffset(long offset)
-	{
-		return ranges::v3::any_of(
-			m_exceptions,
-			[=](auto i) -> bool { return (i->m_handlerType == COR_ILEXCEPTION_CLAUSE_NONE
-				                      && i->m_handlerStart->m_offset == offset
-					                  && i->m_handlerStart->m_operand == CEE_THROW);}
-		);
 	}
 
 	/// <summary>Get the size of the COR_IL_MAP block</summary>
