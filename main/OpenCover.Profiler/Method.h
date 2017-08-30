@@ -67,7 +67,6 @@ namespace Instrumentation
 		ExceptionHandler* ReadExceptionHandler(enum CorExceptionFlag type, long tryStart, long tryEnd, long handlerStart, long handlerEnd, long filterStart, ULONG token);
 
 		void WriteSections();
-		bool DoesTryHandlerPointToOffset(long offset);
 
 	private:
 		// all instrumented methods will be FAT (with FAT SECTIONS if exist) regardless

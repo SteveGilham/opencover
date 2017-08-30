@@ -722,44 +722,23 @@ namespace Instrumentation
 			}
 		}
 
-		if (!DoesTryHandlerPointToOffset(actualOffset))
+		for (auto it = m_instructions.begin(); it != m_instructions.end(); ++it)
 		{
-			for (auto it = m_instructions.begin(); it != m_instructions.end(); ++it)
+			if (*it == actualInstruction)
 			{
-				if (*it == actualInstruction)
+				Instruction orig = *(*it);
+				for (unsigned int i = 0; i < clone.size(); i++)
 				{
-					Instruction orig = *(*it);
-					for (unsigned int i = 0; i < clone.size(); i++)
-					{
-						auto temp = it;
-						++it;
-						*(*temp) = *(*it);
-					}
-					*(*it) = orig;
-					break;
+					auto temp = it;
+					++it;
+					*(*temp) = *(*it);
 				}
+				*(*it) = orig;
+				break;
 			}
 		}
-
+		
 		RecalculateOffsets();
-	}
-
-	/// <summary>Test if we have an exception where the handler start points to the 
-	/// instruction at the supplied offset</summary>
-	/// <param name="offset">The offset to look for.</param>
-	/// <returns>An <c>Instruction</c> that exists at that location.</returns>
-	bool Method::DoesTryHandlerPointToOffset(long offset)
-	{
-		for (auto it = m_exceptions.begin(); it != m_exceptions.end(); ++it)
-		{
-			if ((*it)->m_handlerType == COR_ILEXCEPTION_CLAUSE_NONE
-				&& ((*it)->m_handlerStart->m_offset == offset 
-				&& (*it)->m_handlerStart->m_operand == CEE_THROW))
-			{
-				return true;
-			}
-		}
-		return false;
 	}
 
 	/// <summary>Get the size of the COR_IL_MAP block</summary>
